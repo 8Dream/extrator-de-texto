@@ -1,0 +1,14 @@
+# Ao enviar uma tag de versao (vX.Y.Z), gera o instalador .exe e publica a
+# Release com ele anexado. Usa o runner Windows compartilhado (tag "windows").
+build-instalador:
+  stage: build
+  tags: [windows]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - powershell -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
+    - powershell -NoProfile -ExecutionPolicy Bypass -File installer\publish.ps1
+  artifacts:
+    paths:
+      - dist/*.exe
+    expire_in: never

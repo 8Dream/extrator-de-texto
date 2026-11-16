@@ -1,0 +1,11 @@
+markitdown[pdf,docx,xlsx,pptx]==0.1.6
+rich>=13.9,<15
+PyMuPDF>=1.26,<2
+pytesseract>=0.3.13,<1
+Pillow>=11,<13
+ocrmypdf>=17.8,<18
+pypdfium2>=5.9
+pywebview>=6,<7
+faster-whisper==1.2.1
+soundfile==0.14.0
+static-ffmpeg>=2.5

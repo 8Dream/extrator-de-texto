@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extrator de Texto</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">E</div>
+      <div class="brand-text">
+        <strong>Extrator de Texto</strong>
+        <span id="appVersion">v0.1.0</span>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-page="convert">
+        <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+        <span>Converter</span>
+      </button>
+      <button class="nav-item" data-page="batch">
+        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span>Lote</span>
+      </button>
+      <button class="nav-item" data-page="transcribe">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        <span>Transcrição</span>
+        <i class="nav-badge" id="navBadgeTr" hidden></i>
+      </button>
+      <button class="nav-item" data-page="diagnose">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>Diagnóstico</span>
+      </button>
+      <button class="nav-item" data-page="exec">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/><path d="m16 15 2 2 4-4"/></svg>
+        <span>Execuções</span>
+        <i class="nav-count" id="navCountExec" hidden></i>
+      </button>
+      <button class="nav-item" data-page="log">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        <span>Log</span>
+      </button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" data-page="settings">
+        <svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        <span>Configurações</span>
+      </button>
+      <button class="nav-item" data-page="help">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></svg>
+        <span>Ajuda e instalação</span>
+        <i class="nav-badge warn" id="navBadgeHelp" hidden></i>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="ghost-btn" id="themeBtn" title="Alternar tema claro/escuro">
+        <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <span id="themeLabel">Tema escuro</span>
+      </button>
+      <p class="privacy">Tudo é processado neste computador. Nada é enviado para fora.</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="pages">
+
+      <!-- ===================== CONVERTER ===================== -->
+      <section class="page active" id="page-convert" data-title="Converter">
+        <header class="page-head">
+          <h1>Converter</h1>
+          <p>Transforme PDFs, imagens e documentos em texto pesquisável, Markdown ou TXT.</p>
+        </header>
+
+        <div class="card">
+          <h2>1. O que você quer fazer?</h2>
+          <div class="mode-grid" id="convertModes" role="radiogroup" aria-label="Modo de conversão"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>2. Arquivos</h2>
+            <span class="muted" id="convertCount"></span>
+          </div>
+          <div class="dropzone" id="convertDrop" tabindex="0" role="button" aria-label="Selecionar arquivos">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <div>
+              <strong>Clique para selecionar</strong> <span class="muted">ou arraste os arquivos para cá</span>
+              <div class="muted small" id="convertAccepts"></div>
+            </div>
+          </div>
+          <ul class="file-list" id="convertFiles"></ul>
+          <div class="row-end" id="convertFilesActions" hidden>
+            <button class="btn btn-link" id="convertClear">Limpar lista</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>3. Saída</h2>
+          <label class="switch-row">
+            <input type="checkbox" id="sameFolder" checked>
+            <span class="switch" aria-hidden="true"></span>
+            <span>Salvar na mesma pasta de cada arquivo de origem</span>
+          </label>
+          <div class="field-row" id="outFolderRow" hidden>
+            <input class="input grow" id="outFolder" placeholder="Pasta de saída" readonly>
+            <button class="btn" id="outFolderPick">Escolher pasta</button>
+          </div>
+          <div class="options" id="convertOptions">
+            <div class="field" id="pagesField">
+              <label for="pages">Páginas <span class="muted">(vazio = todas)</span></label>
+              <input class="input" id="pages" placeholder="Ex.: 1-10, 15, 20-25">
+            </div>
+            <div class="field" id="formatField">
+              <label>Formato de saída</label>
+              <div class="segmented" id="convertFormat" role="radiogroup">
+                <button type="button" data-value="md" class="on">Markdown</button>
+                <button type="button" data-value="txt">TXT</button>
+                <button type="button" data-value="both">Ambos</button>
+              </div>
+            </div>
+            <label class="check" id="combineField">
+              <input type="checkbox" id="combineImages" checked>
+              <span>Juntar todas as imagens em um único arquivo</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="actionbar">
+          <div class="muted" id="convertSummary">Selecione ao menos um arquivo.</div>
+          <div class="actions">
+            <button class="btn btn-danger" id="convertCancel" hidden>Cancelar</button>
+            <button class="btn btn-primary" id="convertStart">Iniciar conversão</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== LOTE ===================== -->
+      <section class="page" id="page-batch" data-title="Lote">
+        <header class="page-head">
+          <h1>Lote</h1>
+          <p>Processe todos os arquivos de uma pasta de uma só vez.</p>
+        </header>
+
+        <div class="card">
+          <h2>Pastas</h2>
+          <div class="field">
+            <label>Pasta de entrada</label>
+            <div class="field-row">
+              <input class="input grow" id="batchIn" placeholder="Nenhuma pasta escolhida" readonly>
+              <button class="btn" id="batchInPick">Escolher pasta</button>
+            </div>
+          </div>
+          <label class="switch-row">
+            <input type="checkbox" id="batchRecursive">
+            <span class="switch" aria-hidden="true"></span>
+            <span>Incluir subpastas</span>
+          </label>
+          <div class="field">
+            <label>Pasta de saída</label>
+            <div class="field-row">
+              <input class="input grow" id="batchOut" placeholder="Por padrão: Extrator_saida dentro da pasta de entrada">
+              <button class="btn" id="batchOutPick">Escolher pasta</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>O que fazer com os arquivos</h2>
+          <div class="mode-grid" id="batchModes" role="radiogroup" aria-label="Modo do lote"></div>
+        </div>
+
+        <div class="actionbar">
+          <div class="muted" id="batchSummary">Escolha a pasta de entrada.</div>
+          <div class="actions">
+            <button class="btn btn-danger" id="batchCancel" hidden>Cancelar</button>
+            <button class="btn btn-primary" id="batchStart">Iniciar lote</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TRANSCRIÇÃO ===================== -->
+      <section class="page" id="page-transcribe" data-title="Transcrição">
+        <header class="page-head">
+          <h1>Transcrição</h1>
+          <p>Transforme áudios e vídeos em texto, com o Whisper rodando neste computador.</p>
+        </header>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Fila</h2>
+            <div class="inline-actions">
+              <button class="btn btn-sm" id="trAdd">Adicionar arquivos</button>
+              <button class="btn btn-sm" id="trUp" title="Mover para cima" aria-label="Mover para cima">↑</button>
+              <button class="btn btn-sm" id="trDown" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
+              <button class="btn btn-sm" id="trRemove">Remover</button>
+              <button class="btn btn-sm" id="trClear">Limpar</button>
+            </div>
+          </div>
+          <div class="dropzone slim" id="trDrop" tabindex="0" role="button" aria-label="Adicionar áudios ou vídeos">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <span><strong>Adicionar áudios ou vídeos</strong> <span class="muted">mp3, wav, m4a, ogg, flac, aac, wma, mp4, mkv, mov, avi, webm…</span></span>
+          </div>
+          <ul class="queue" id="trQueue"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Opções <span class="muted">(valem para toda a fila)</span></h2>
+          <div class="options grid-4">
+            <div class="field">
+              <label for="trModel">Modelo</label>
+              <select class="input" id="trModel"></select>
+            </div>
+            <div class="field">
+              <label for="trLang">Idioma</label>
+              <select class="input" id="trLang"></select>
+            </div>
+            <div class="field">
+              <label for="trFormat">Formato</label>
+              <select class="input" id="trFormat"></select>
+            </div>
+            <div class="field">
+              <label for="trBeams">Precisão da busca (beams)</label>
+              <input class="input" type="number" id="trBeams" min="1" max="10" value="5">
+            </div>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="trWord">
+            <span>Marcar o tempo de cada palavra <span class="muted">(srt e json)</span></span>
+          </label>
+          <div class="model-info">
+            <span id="trModelInfo" class="muted"></span>
+            <button class="btn btn-link" id="trDownload">Baixar outro modelo…</button>
+          </div>
+          <div class="chips" id="trDeps" aria-label="Dependências"></div>
+        </div>
+
+        <div class="card progress-card">
+          <div class="card-head">
+            <h2>Progresso</h2>
+            <span class="muted" id="trStatus">Fila vazia.</span>
+          </div>
+          <div class="bigbar"><div class="bigbar-fill" id="trBar" style="width:0%"></div></div>
+          <div class="stats">
+            <div><span>Processado</span><strong id="trDone">00:00:00 / 00:00:00</strong></div>
+            <div><span>Restante</span><strong id="trLeft">00:00:00</strong></div>
+            <div><span>Decorrido</span><strong id="trElapsed">00:00:00</strong></div>
+            <div><span>Estimativa</span><strong id="trEta">--:--:--</strong></div>
+          </div>
+        </div>
+
+        <div class="actionbar">
+          <div class="muted" id="trSummary"></div>
+          <div class="actions">
+            <button class="btn" id="trOpen" disabled>Abrir pasta de saída</button>
+            <button class="btn btn-danger" id="trCancel" disabled>Cancelar</button>
+            <button class="btn" id="trPause" disabled>Pausar</button>
+            <button class="btn btn-primary" id="trStart">Iniciar fila</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== DIAGNÓSTICO ===================== -->
+      <section class="page" id="page-diagnose" data-title="Diagnóstico">
+        <header class="page-head">
+          <h1>Diagnóstico</h1>
+          <p>Analise um PDF ou imagem antes de decidir qual modo usar.</p>
+        </header>
+        <div class="card">
+          <div class="field-row">
+            <input class="input grow" id="diagPath" placeholder="Nenhum arquivo selecionado" readonly>
+            <button class="btn" id="diagPick">Escolher arquivo</button>
+            <button class="btn btn-primary" id="diagRun">Diagnosticar</button>
+          </div>
+        </div>
+        <div class="card flush" id="diagCard" hidden>
+          <table class="table" id="diagTable"><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- ===================== EXECUÇÕES ===================== -->
+      <section class="page" id="page-exec" data-title="Execuções">
+        <header class="page-head">
+          <h1>Execuções</h1>
+          <p>Tudo o que o programa está fazendo e o que já fez, com etapa, tempo, estimativa e log de cada tarefa.</p>
+        </header>
+
+        <div class="card">
+          <div class="exec-tools">
+            <div class="segmented" id="execEstados" role="radiogroup" aria-label="Filtrar por estado">
+              <button type="button" role="radio" aria-checked="true" data-value="todas" class="on">Todas</button>
+              <button type="button" role="radio" aria-checked="false" data-value="ativas">Em andamento</button>
+              <button type="button" role="radio" aria-checked="false" data-value="concluida">Concluídas</button>
+              <button type="button" role="radio" aria-checked="false" data-value="falhou">Falhas</button>
+              <button type="button" role="radio" aria-checked="false" data-value="cancelada">Canceladas</button>
+              <button type="button" role="radio" aria-checked="false" data-value="interrompida">Interrompidas</button>
+            </div>
+          </div>
+          <div class="exec-tools">
+            <select class="input exec-select" id="execFerramenta" aria-label="Filtrar por ferramenta">
+              <option value="">Todas as ferramentas</option>
+            </select>
+            <input class="input grow" id="execBusca" type="search" placeholder="Buscar por nome, arquivo, etapa ou resultado" aria-label="Buscar nas execuções">
+            <button class="btn btn-sm" id="execLimpar">Limpar concluídas</button>
+          </div>
+          <div class="muted small" id="execResumo">Carregando…</div>
+        </div>
+
+        <ul class="exec-list" id="execLista" aria-label="Lista de execuções"></ul>
+        <p class="muted exec-vazio" id="execVazio" hidden></p>
+        <div class="sr-only" id="execLive" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <!-- ===================== LOG ===================== -->
+      <section class="page" id="page-log" data-title="Log">
+        <header class="page-head">
+          <h1>Log</h1>
+          <p>Acompanhe o registro do programa ao vivo ou abra um log antigo. Cada execução também aponta para as suas linhas aqui.</p>
+        </header>
+
+        <div class="card">
+          <div class="log-tools">
+            <div class="field">
+              <label for="logArquivo">Arquivo</label>
+              <select class="input" id="logArquivo"></select>
+            </div>
+            <div class="field">
+              <label for="logNivel">Nível</label>
+              <select class="input" id="logNivel">
+                <option value="tudo">Tudo</option>
+                <option value="avisos">Avisos e erros</option>
+                <option value="erros">Só erros</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="logBusca">Buscar</label>
+              <input class="input" id="logBusca" type="search" placeholder="Texto na linha">
+            </div>
+          </div>
+          <div class="log-bar">
+            <button class="btn btn-sm" id="logPausar" aria-pressed="false">Pausar</button>
+            <label class="check"><input type="checkbox" id="logAuto" checked><span>Rolar automaticamente</span></label>
+            <button class="btn btn-sm" id="logAntigas">Carregar linhas anteriores</button>
+            <button class="btn btn-sm" id="logBuscarTudo">Buscar no arquivo inteiro</button>
+            <span class="grow"></span>
+            <button class="btn btn-sm" id="logCopiar">Copiar</button>
+            <button class="btn btn-sm" id="logPasta">Abrir pasta do log</button>
+          </div>
+          <div class="banner log-foco" id="logFoco" hidden>
+            <span id="logFocoTexto"></span>
+            <button class="btn btn-sm" id="logFocoSair">Mostrar o log inteiro</button>
+          </div>
+          <div class="log-view" id="logView" tabindex="0" role="log" aria-live="off" aria-label="Conteúdo do log"></div>
+          <div class="muted small log-info" id="logInfo">Abra a tela para carregar o log.</div>
+        </div>
+      </section>
+
+      <!-- ===================== CONFIGURAÇÕES ===================== -->
+      <section class="page" id="page-settings" data-title="Configurações">
+        <header class="page-head">
+          <h1>Configurações</h1>
+          <p>Ajustes do OCR. A pasta de saída é escolhida a cada operação, nas telas Converter e Lote.</p>
+        </header>
+        <div class="card">
+          <h2>Reconhecimento de texto</h2>
+          <div class="options grid-3">
+            <div class="field"><label for="setLanguage">Idioma do OCR</label>
+              <input class="input" id="setLanguage" placeholder="por+eng"></div>
+            <div class="field"><label for="setDpi">Resolução (DPI)</label>
+              <input class="input" type="number" id="setDpi" min="100" max="600"></div>
+            <div class="field"><label for="setPsm">PSM do Tesseract</label>
+              <input class="input" type="number" id="setPsm" min="0" max="13"></div>
+            <div class="field"><label for="setThreshold">Limite de texto nativo</label>
+              <input class="input" type="number" id="setThreshold" min="0" max="2000"></div>
+            <div class="field"><label for="setCpu">Uso de CPU</label>
+              <select class="input" id="setCpu"><option value="economico">Econômico</option><option value="normal">Normal</option><option value="maximo">Máximo</option></select></div>
+            <div class="field"><label for="setPdf">Tipo de PDF de saída</label>
+              <select class="input" id="setPdf"><option value="pdf">PDF</option><option value="pdfa">PDF/A (exige Ghostscript)</option></select></div>
+            <div class="field"><label for="setVerbosity">Detalhe do log</label>
+              <select class="input" id="setVerbosity"><option value="normal">Normal</option><option value="detalhado">Detalhado</option><option value="depuracao">Depuração</option></select></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Comportamento</h2>
+          <label class="switch-row"><input type="checkbox" id="setRotate"><span class="switch"></span><span>Girar páginas automaticamente</span></label>
+          <label class="switch-row"><input type="checkbox" id="setDeskew"><span class="switch"></span><span>Corrigir páginas inclinadas</span></label>
+          <label class="switch-row"><input type="checkbox" id="setResume"><span class="switch"></span><span>Retomar OCR interrompido</span></label>
+          <label class="switch-row"><input type="checkbox" id="setOpen"><span class="switch"></span><span>Abrir a pasta de saída ao concluir</span></label>
+        </div>
+        <div class="actionbar">
+          <div class="muted" id="settingsMsg"></div>
+          <div class="actions">
+            <button class="btn" id="setRestore">Restaurar padrões</button>
+            <button class="btn btn-primary" id="setSave">Salvar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== AJUDA ===================== -->
+      <section class="page" id="page-help" data-title="Ajuda e instalação">
+        <header class="page-head">
+          <h1>Ajuda e instalação</h1>
+          <p>Verifique se tudo está instalado e consulte como cada modo funciona.</p>
+        </header>
+        <div class="card flush">
+          <div class="card-head pad">
+            <h2>Estado da instalação</h2>
+            <div class="inline-actions">
+              <button class="btn btn-sm btn-primary" id="helpCheck">Verificar instalação</button>
+              <button class="btn btn-sm" id="helpClear">Limpar cache e logs</button>
+              <button class="btn btn-sm" id="helpData">Abrir pasta de dados</button>
+            </div>
+          </div>
+          <div class="checkline" id="checkLine" hidden><span id="checkLineText"></span></div>
+          <div class="banner" id="installBanner" hidden>
+            <span id="installBannerText"></span>
+            <button class="btn btn-sm btn-primary" id="installFix">Instalar o que falta</button>
+          </div>
+          <table class="table" id="installTable"><tbody>
+            <tr><td colspan="3" class="muted empty">Clique em “Verificar instalação”.</td></tr>
+          </tbody></table>
+        </div>
+        <div class="card help">
+          <h2>Como cada modo funciona</h2>
+          <dl>
+            <dt>Conversão direta</dt><dd>Usa o MarkItDown e não faz OCR.</dd>
+            <dt>OCR automático</dt><dd>Mantém o texto nativo e aplica OCR só nas páginas sem texto suficiente.</dd>
+            <dt>OCR forçado</dt><dd>Reconhece todas as páginas. Mais lento.</dd>
+            <dt>PDF pesquisável</dt><dd>Usa o OCRmyPDF: mantém a aparência do PDF e adiciona uma camada de texto.</dd>
+            <dt>Segurança</dt><dd>O arquivo original nunca é sobrescrito. Documentos e áudios não saem deste computador.</dd>
+          </dl>
+          <p class="muted small" id="helpPaths"></p>
+        </div>
+      </section>
+    </div>
+
+    <!-- confirmações e formulários rápidos: aparecem aqui, dentro da janela -->
+    <div id="modalRoot" aria-live="polite"></div>
+
+    <!-- ===================== EXECUÇÃO (global) ===================== -->
+    <div class="dock" id="dock">
+      <div class="dock-bar">
+        <span class="dot" id="dockDot"></span>
+        <span class="dock-status" id="dockStatus">Pronto.</span>
+        <div class="dock-progress" id="dockProgress" hidden>
+          <div class="track"><div class="fill" id="dockFill"></div></div>
+          <span id="dockPercent"></span>
+        </div>
+        <button class="btn btn-sm btn-link" id="dockExec" hidden title="Abrir a tela Execuções"></button>
+        <button class="btn btn-sm btn-link" id="dockToggle" aria-expanded="false">Ver log</button>
+      </div>
+      <div class="dock-log" id="dockLogWrap" hidden>
+        <div class="dock-log-head">
+          <span class="muted small">Registro da sessão</span>
+          <button class="btn btn-sm btn-link" id="dockClear">Limpar</button>
+        </div>
+        <pre class="log" id="dockLog" tabindex="0"></pre>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

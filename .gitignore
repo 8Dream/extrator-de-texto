@@ -1,0 +1,15 @@
+# Ambiente Python e dados locais: gerados pelo Instalar.bat / pelo proprio
+# programa, nao fazem parte do codigo-fonte.
+venv/
+dados/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+
+# Arquivos de teste manual eventualmente deixados na raiz
+/teste_ocr*.pdf
+/teste_ocr*.md
+
+# Atalho pessoal com caminho absoluto
+*.lnk

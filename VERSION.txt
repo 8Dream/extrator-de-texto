@@ -1,0 +1,2 @@
+Extrator de Texto
+Versao 0.1.0
