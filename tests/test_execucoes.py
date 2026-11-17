@@ -22,7 +22,6 @@ import extrator_api as fa  # noqa: E402
 import leitorlog  # noqa: E402
 import transcricao_core as transcricao  # noqa: E402
 
-WEB = ROOT / "src" / "web"
 
 
 class Relogio:
@@ -965,33 +964,3 @@ def test_execucao_aponta_para_o_proprio_trecho_do_log(relogio, tmp_path):
     assert "durante" in [l["x"] for l in trecho["linhas"]] and "antes" not in [l["x"] for l in trecho["linhas"]]
     recarregado = execucoes.Registro(tmp_path / "d").snapshot()["execucoes"][0]
     assert recarregado["log_arquivo"] == "sessao.log" and recarregado["log_ini"] == d["log_ini"]  # o vinculo sobrevive ao reinicio
-
-
-# --------------------------------------------------------------------- interface web
-
-
-def test_interface_tem_central_e_tela_de_log():
-    html = (WEB / "index.html").read_text(encoding="utf-8")
-    js = (WEB / "app.js").read_text(encoding="utf-8")
-    css = (WEB / "styles.css").read_text(encoding="utf-8")
-    for pagina in ("exec", "log"):
-        assert f'data-page="{pagina}"' in html and f'id="page-{pagina}"' in html
-    for chamada in ("exec_listar", "exec_detalhe", "exec_cancelar", "exec_repetir", "exec_resumo", "exec_limpar_concluidas",
-                    "log_arquivos", "log_ler", "log_buscar", "log_registrar", "log_abrir_pasta"):
-        assert f'"{chamada}"' in js, chamada
-    for botao in ("execLimpar", "logPausar", "logCopiar", "logPasta", "dockExec", "logAuto"):
-        assert f'id="{botao}"' in html
-    # barra: determinada so com total; senao, indeterminada (classe `indet` existente no CSS)
-    assert 'classList.toggle("indet", !det' in js and ".track.indet .fill" in css
-    assert "Ver no log" in js and "aria-live" in html and 'role="progressbar"' in js
-    # acessibilidade e energia: foco visivel, anuncio de estado, pausa com a janela oculta
-    assert ":focus-visible" in css and "visibilitychange" in js and ".oculta" in css and "prefers-reduced-motion" in css
-    assert "estimando" not in js  # o texto do ETA vem sempre do Python (uma unica regra de estimativa)
-
-
-def test_interface_ainda_nao_usa_pop_ups_nem_navegacao_externa():
-    for arquivo in WEB.rglob("*"):
-        if arquivo.suffix in {".js", ".html"}:
-            texto = arquivo.read_text(encoding="utf-8")
-            assert not re.search(r"(?<![\w$.])(?:window\.)?(?:alert|confirm|prompt)\s*\(", re.sub(r"/\*.*?\*/", "", texto, flags=re.S))
-            assert "window.open" not in texto and "_blank" not in texto

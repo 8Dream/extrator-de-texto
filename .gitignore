@@ -13,3 +13,7 @@ dist/
 
 # Atalho pessoal com caminho absoluto
 *.lnk
+build/
+
+# Interface Rust
+ui/target/

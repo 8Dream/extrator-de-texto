@@ -1,4 +1,5 @@
 ; Instalador leve do Extrator de Texto.
+; O Extrator de Texto.exe e a interface nativa em Rust (ui\, gerada em build\Extrator de Texto.exe).
 ; Copia o codigo para a pasta do usuario e executa install.ps1, que baixa
 ; Python, bibliotecas e Tesseract. Compile com installer\build.ps1.
 
@@ -27,6 +28,8 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName={#AppName}
 CloseApplications=yes
+; Sem a caixa "A pasta existe" (sobras de uma instalacao anterior): nada de pop-up.
+DirExistsWarning=no
 SetupIconFile={#Root}\src\assets\icone.ico
 UninstallDisplayIcon={app}\src\assets\icone.ico
 
@@ -38,23 +41,24 @@ Name: "desktopicon"; Description: "Criar atalho na area de trabalho"; Flags: unc
 
 [Files]
 Source: "{#Root}\src\*.py"; DestDir: "{app}\src"; Flags: ignoreversion
-Source: "{#Root}\src\web\*"; DestDir: "{app}\src\web"; Excludes: "dev\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#Root}\src\assets\*"; DestDir: "{app}\src\assets"; Flags: ignoreversion
-Source: "{#Root}\scripts\*.bat"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#Root}\build\Extrator de Texto.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\scripts\install.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "{#Root}\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\requirements.txt"; DestDir: "{app}"; Attribs: hidden; Flags: ignoreversion
 Source: "{#Root}\VERSION.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Extrator de Texto"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\src\extrator.py"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"
-Name: "{autoprograms}\Extrator de Texto - Reparar instalacao"; Filename: "{app}\scripts\Instalar.bat"; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"
-Name: "{autodesktop}\Extrator de Texto"; Filename: "{app}\venv\Scripts\pythonw.exe"; Parameters: """{app}\src\extrator.py"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"; Tasks: desktopicon
+Name: "{autoprograms}\Extrator de Texto"; Filename: "{app}\Extrator de Texto.exe"; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"
+Name: "{autoprograms}\Extrator de Texto - Reparar instalacao"; Filename: "{app}\Extrator de Texto.exe"; Parameters: "--reparar"; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"
+Name: "{autoprograms}\Desinstalar Extrator de Texto"; Filename: "{uninstallexe}"; IconFilename: "{app}\src\assets\icone.ico"
+Name: "{autodesktop}\Extrator de Texto"; Filename: "{app}\Extrator de Texto.exe"; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icone.ico"; Tasks: desktopicon
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\venv"
 Type: filesandordirs; Name: "{app}\dados"
 Type: filesandordirs; Name: "{app}\__pycache__"
+Type: filesandordirs; Name: "{app}\src\__pycache__"
 
 [Code]
 // As dependencias (Python, bibliotecas, Tesseract) sao instaladas pelo
@@ -92,6 +96,24 @@ begin
   begin
     TranslateMessage(Msg);
     DispatchMessage(Msg);
+  end;
+end;
+function GetFileAttributes(lpFileName: String): Cardinal;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
+function SetFileAttributes(lpFileName: String; dwFileAttributes: Cardinal): Longint;
+  external 'SetFileAttributesW@kernel32.dll stdcall';
+
+// Pastas internas (ambiente Python, scripts, idiomas do OCR) ficam ocultas:
+// a pasta de instalacao mostra so o programa e o desinstalador.
+procedure HideInternal(const Path: String);
+var
+  Attr: Cardinal;
+begin
+  if DirExists(Path) or FileExists(Path) then
+  begin
+    Attr := GetFileAttributes(Path);
+    if Attr <> $FFFFFFFF then
+      SetFileAttributes(Path, Attr or 2);
   end;
 end;
 var
@@ -259,7 +281,14 @@ begin
     WizardForm.ProgressGauge.Style := npbstNormal;
     DepsFailed := (not Ok) or (DepsExitCode <> 0);
   end;
+  if CurStep = ssPostInstall then
+  begin
+    HideInternal(ExpandConstant('{app}\venv'));
+    HideInternal(ExpandConstant('{app}\scripts'));
+    HideInternal(ExpandConstant('{app}\dados\tessdata'));
+  end;
 end;
+
 procedure CurPageChanged(CurPageID: Integer);
 begin
   if (CurPageID = wpFinished) and DepsFailed then

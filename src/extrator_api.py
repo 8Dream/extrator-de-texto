@@ -1,17 +1,13 @@
 """
-Extrator de Texto - ponte entre a interface HTML e o motor.
+Extrator de Texto - ponte entre a interface e o motor.
 
-A classe Api e entregue ao pywebview (js_api): cada metodo publico pode ser
-chamado do JavaScript como `await pywebview.api.metodo(...)` e devolve sempre
-um dicionario serializavel em JSON. Todo trabalho pesado roda em threads; o
-progresso volta para a interface como eventos (ver `drain_events`), que o
-extrator.py empurra para o JavaScript.
+A classe Api e exposta pelo motor.py (interface nativa em Rust) por stdin/stdout:
+cada metodo publico e chamavel como requisicao do protocolo e devolve sempre um
+dicionario serializavel em JSON (ver docs/PROTOCOLO-MOTOR.md). Todo trabalho
+pesado roda em threads; o progresso volta como eventos (`drain_events`).
 
-Este modulo nao importa o pywebview no topo: assim ele pode ser testado sem
-janela. A janela e injetada por `attach_window()`.
-
-Atencao: o pywebview expoe ao JS todo atributo publico. Por isso todo estado
-interno comeca com underscore.
+Nao ha janela: os seletores de arquivo sao da interface nativa. Todo estado
+interno comeca com underscore, para nao virar metodo do protocolo por engano.
 """
 from __future__ import annotations
 
@@ -146,6 +142,30 @@ _REPETIVEIS = {"start_convert", "start_batch", "start_transcricao", "start_check
 _NIVEIS_LOG = {"ERROR": logging.ERROR, "WARNING": logging.WARNING, "INFO": logging.INFO}
 
 
+# Verificacao da instalacao: o que esta ausente mas NAO e defeito vira "aviso"
+# (conta como ok=True): o modelo de transcricao e baixado no 1o uso.
+_LINHA_MODELO = "Modelo de transcricao"
+_AVISOS_OPCIONAIS = {_LINHA_MODELO}
+_AVISO_DETALHE = {
+    _LINHA_MODELO: "será baixado no 1º uso",
+}
+
+
+def _estado_linha(name: str, ok: bool) -> str:
+    if ok:
+        return "ok"
+    return "aviso" if name in _AVISOS_OPCIONAIS else "falha"
+
+
+def _texto_resumo_instalacao(total: int, n_ok: int, n_aviso: int, n_falha: int) -> str:
+    texto = f"{n_ok} de {total} OK"
+    if n_aviso:
+        texto += f", {n_aviso} {'aviso' if n_aviso == 1 else 'avisos'}"
+    if n_falha:
+        texto += f", {n_falha} {'falha' if n_falha == 1 else 'falhas'}"
+    return texto
+
+
 def _signed(path: Path) -> bool:
     try:
         return core.pdf_is_signed(path)
@@ -153,26 +173,9 @@ def _signed(path: Path) -> bool:
         return False
 
 
-def _file_filter(accepts: str) -> tuple[str, ...]:
-    if accepts == "images":
-        return ("Imagens (*.png;*.jpg;*.jpeg;*.tif;*.tiff;*.bmp;*.webp)", "Todos os arquivos (*.*)")
-    if accepts == "direct":
-        return (
-            "Documentos (*.pdf;*.docx;*.pptx;*.xlsx;*.html;*.htm;*.txt;*.csv;*.json;*.xml)",
-            "Todos os arquivos (*.*)",
-        )
-    if accepts == "media":
-        exts = ";".join(f"*{ext}" for ext in sorted(transcricao.ENTRADA_EXTS))
-        return (f"Áudio e vídeo ({exts})", "Todos os arquivos (*.*)")
-    if accepts == "diagnose":
-        return ("PDF e imagens (*.pdf;*.png;*.jpg;*.jpeg;*.tif;*.tiff;*.bmp;*.webp)", "Todos os arquivos (*.*)")
-    return ("PDF (*.pdf)", "Todos os arquivos (*.*)")
-
-
 class Api:
     def __init__(self) -> None:
         self._events: queue.Queue = queue.Queue()
-        self._window = None
         self._job_thread: threading.Thread | None = None
         self._cancel = threading.Event()
         self._job_errors = False
@@ -188,9 +191,6 @@ class Api:
 
     # ------------------------------------------------------------ infraestrutura
 
-    def attach_window(self, window) -> None:
-        self._window = window
-
     def drain_events(self) -> list[dict]:
         events = []
         try:
@@ -201,7 +201,7 @@ class Api:
         return events
 
     def is_busy(self) -> dict:
-        """Usado ao fechar a janela (nao e chamado pelo JS)."""
+        """Usado ao fechar o programa (para avisar de trabalho em andamento)."""
         return {"ocr": self._alive(self._job_thread), "transcricao": self._alive(self._tr_thread)}
 
     def request_stop_all(self) -> None:
@@ -215,16 +215,6 @@ class Api:
 
     def _emit(self, **event) -> None:
         self._events.put(event)
-
-    def _dialog(self, kind: str, **kwargs):
-        import webview  # importado aqui para o modulo funcionar sem janela
-
-        if self._window is None:
-            raise RuntimeError("Janela indisponível.")
-        dialog_type = getattr(getattr(webview, "FileDialog", None), kind, None)
-        if dialog_type is None:
-            dialog_type = getattr(webview, f"{kind}_DIALOG")
-        return self._window.create_file_dialog(dialog_type, **kwargs)
 
     # ------------------------------------------------------------------ inicio
 
@@ -250,18 +240,6 @@ class Api:
             "transcricao": self._transcricao_state(),
             "busy": self.is_busy(),
         }
-
-    # --------------------------------------------------------------- selecao
-
-    @_safe
-    def pick_files(self, accepts: str = "pdf") -> dict:
-        chosen = self._dialog("OPEN", allow_multiple=True, file_types=_file_filter(accepts))
-        return {"ok": True, "paths": [str(p) for p in (chosen or [])]}
-
-    @_safe
-    def pick_folder(self, title: str = "") -> dict:
-        chosen = self._dialog("FOLDER")
-        return {"ok": True, "path": str(chosen[0]) if chosen else ""}
 
     @_safe
     def open_path(self, path: str) -> dict:
@@ -791,14 +769,24 @@ class Api:
 
     @staticmethod
     def _summarize_install(rows) -> dict:
+        """Cada linha ganha `estado` ("ok", "aviso" ou "falha"); `ok` continua booleano
+        (aviso conta como ok=True). `missing_pip` so lista o que e FALHA de verdade."""
         pip_specs = {**core.PIP_REQUIREMENTS, **transcricao.PIP_REQUIREMENTS}
-        missing_pip = [name for name, ok, _ in rows if not ok and name in pip_specs]
-        missing_model = any(name == "Modelo de transcricao" and not ok for name, ok, _ in rows)
+        linhas = []
+        for name, ok, detail in rows:
+            estado = _estado_linha(name, ok)
+            if estado == "aviso" and name in _AVISO_DETALHE and not ok:
+                detail = _AVISO_DETALHE[name]
+            linhas.append({"name": name, "ok": estado != "falha", "estado": estado, "detail": detail})
+        contagem = {estado: sum(1 for l in linhas if l["estado"] == estado) for estado in ("ok", "aviso", "falha")}
         return {
             "ok": True,
-            "rows": [{"name": n, "ok": bool(ok), "detail": d} for n, ok, d in rows],
-            "missing_pip": missing_pip,
-            "missing_model": missing_model,
+            "rows": linhas,
+            "total": len(linhas),
+            "n_ok": contagem["ok"], "n_aviso": contagem["aviso"], "n_falha": contagem["falha"],
+            "resumo": _texto_resumo_instalacao(len(linhas), contagem["ok"], contagem["aviso"], contagem["falha"]),
+            "missing_pip": [l["name"] for l in linhas if l["estado"] == "falha" and l["name"] in pip_specs],
+            "missing_model": any(name == _LINHA_MODELO and not ok for name, ok, _ in rows),
         }
 
     @_safe
@@ -808,8 +796,7 @@ class Api:
             ex.definir_etapa("Verificando componentes")
             rows = self._install_rows()
             resumo = self._summarize_install(rows)
-            faltam = [n for n, ok, _ in rows if not ok]
-            ex.concluir(f"{len(rows) - len(faltam)} de {len(rows)} componente(s) OK.", avisos=len(faltam))
+            ex.concluir(resumo["resumo"], avisos=resumo["n_aviso"] + resumo["n_falha"])
         return resumo
 
     @staticmethod
@@ -840,22 +827,22 @@ class Api:
             try:
                 for index, (name, ok, detail) in enumerate(self._iter_install_rows(), 1):
                     rows.append((name, ok, detail))
+                    linha = self._summarize_install([(name, ok, detail)])["rows"][0]
                     ex.avancar_geral(index)
                     ex.definir_etapa(f"Verificado: {name}")
-                    ex.log(f"{name}: {'OK' if ok else 'FALTA'} - {detail}", "info" if ok else "aviso")
-                    self._emit(type="check_row", index=index, name=name, ok=bool(ok), detail=str(detail))
-                faltam = [n for n, ok, _ in rows if not ok]
-                ex.concluir(f"{len(rows) - len(faltam)} de {len(rows)} componente(s) OK."
-                            + (f" Faltam: {', '.join(faltam)}." if faltam else ""), avisos=len(faltam))
-                self._emit(type="check_done", **self._summarize_install(rows))
+                    rotulo = {"ok": "OK", "aviso": "AVISO", "falha": "FALTA"}[linha["estado"]]
+                    ex.log(f"{name}: {rotulo} - {linha['detail']}", "info" if linha["estado"] == "ok" else "aviso")
+                    self._emit(type="check_row", index=index, name=name, ok=linha["ok"], estado=linha["estado"],
+                               detail=str(linha["detail"]))
+                resumo = self._summarize_install(rows)
+                faltam = [l["name"] for l in resumo["rows"] if l["estado"] == "falha"]
+                ex.concluir(resumo["resumo"] + (f". Faltam: {', '.join(faltam)}." if faltam else ""),
+                            avisos=resumo["n_aviso"] + resumo["n_falha"])
+                self._emit(type="check_done", **resumo)
             except Exception as exc:  # noqa: BLE001
                 logging.exception("Falha ao verificar a instalação")
                 ex.falhar(str(exc) or exc.__class__.__name__)
                 self._emit(type="check_error", text=str(exc) or exc.__class__.__name__)
-
-    def notify_close_blocked(self) -> None:
-        """Usado pelo extrator.py: avisa DENTRO da janela (sem caixa)."""
-        self._emit(type="close_blocked")
 
     @_safe
     def install_missing(self) -> dict:
@@ -863,8 +850,9 @@ class Api:
             return _error("A instalação já está em andamento.")
         pip_specs = {**core.PIP_REQUIREMENTS, **transcricao.PIP_REQUIREMENTS}
         rows = self._install_rows()
-        missing_pip = [(n, pip_specs[n]) for n, ok, _ in rows if not ok and n in pip_specs]
-        missing_model = any(n == "Modelo de transcricao" and not ok for n, ok, _ in rows)
+        missing_pip = [(n, pip_specs[n]) for n, ok, _ in rows
+                       if not ok and n in pip_specs and _estado_linha(n, ok) == "falha"]
+        missing_model = any(n == _LINHA_MODELO and not ok for n, ok, _ in rows)
         if not missing_pip and not missing_model:
             return {"ok": True, "status": "nothing"}
         nomes = [n for n, _spec in missing_pip] + (["modelo de transcrição"] if missing_model else [])

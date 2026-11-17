@@ -122,31 +122,6 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o pip." }
 & $EnvPython -m pip install --upgrade --progress-bar off --no-color -r $Requirements
 if ($LASTEXITCODE -ne 0) { throw "Falha ao instalar as dependencias Python." }
 
-function Test-WebView2 {
-    $keys = @(
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
-        "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
-        "HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
-    )
-    foreach ($key in $keys) {
-        $version = (Get-ItemProperty -Path $key -Name pv -ErrorAction SilentlyContinue).pv
-        if ($version -and $version -ne "0.0.0.0") { return $true }
-    }
-    return $false
-}
-
-Write-Step "Verificando o Microsoft Edge WebView2 (necessario para a interface)"
-if (Test-WebView2) {
-    Write-Host "WebView2 encontrado." -ForegroundColor Green
-} else {
-    if (Test-Command "winget") {
-        & winget install --id Microsoft.EdgeWebView2Runtime -e --silent --disable-interactivity --accept-source-agreements --accept-package-agreements
-    }
-    if (-not (Test-WebView2)) {
-        Write-Warning "WebView2 nao encontrado. Instale em https://developer.microsoft.com/microsoft-edge/webview2/ (Evergreen Runtime) para abrir o programa."
-    }
-}
-
 Write-Step "Verificando Tesseract OCR"
 $TesseractCandidates = @(
     (Get-Command tesseract.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
@@ -266,4 +241,4 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "`nInstalacao concluida com sucesso." -ForegroundColor Green
 Write-Host "Todo o ambiente (venv\) e os dados (dados\) ficam dentro desta propria pasta."
-Write-Host "Abra o programa por: scripts\Abrir_Extrator.bat (ou pelo atalho do Menu Iniciar)"
+Write-Host "Abra o programa pelo atalho 'Extrator de Texto' do Menu Iniciar."

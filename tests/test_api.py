@@ -316,7 +316,10 @@ def test_verificar_instalacao_lista_o_que_falta(api, monkeypatch):
     result = api.check_installation()
     assert result["missing_pip"] == ["Rich"]
     assert result["missing_model"] is True
-    assert [r["ok"] for r in result["rows"]] == [False, True, False]
+    # modelo ausente e AVISO (baixado no 1o uso): conta como ok=True
+    assert [r["ok"] for r in result["rows"]] == [False, True, True]
+    assert [r["estado"] for r in result["rows"]] == ["falha", "ok", "aviso"]
+    assert result["resumo"] == "1 de 3 OK, 1 aviso, 1 falha"
 
 
 def test_tudo_instalado_nao_instala_nada(api, monkeypatch):
@@ -367,39 +370,8 @@ def test_falha_no_pip_e_registrada_no_log(api, monkeypatch):
     assert any("Falha ao instalar Rich" in linha for linha in linhas)
 
 
-# ------------------------------------------------ consistencia da interface web
-
-WEB = ROOT / "src" / "web"
-DINAMICOS = {"dlModel", "dlStatus", "dlGo", "dlClose"}  # criados em tempo de execucao pelo JavaScript
-
-
-def test_todo_id_usado_pelo_javascript_existe_no_html():
-    html = (WEB / "index.html").read_text(encoding="utf-8")
-    js = (WEB / "app.js").read_text(encoding="utf-8")
-    ids_html = set(re.findall(r'\bid="([^"]+)"', html))
-    usados = set(re.findall(r'\$\("#([A-Za-z0-9_-]+)"\)', js))
-    usados |= {i for lista in re.findall(r'for \(const id of \[([^\]]+)\]', js) for i in re.findall(r'"([^"]+)"', lista)}
-    faltando = sorted(usados - ids_html - DINAMICOS)
-    assert not faltando, f"ids usados no app.js e ausentes no index.html: {faltando}"
-
-
-def test_chamadas_da_interface_existem_na_api():
-    js = (WEB / "app.js").read_text(encoding="utf-8")
-    chamadas = set(re.findall(r'\bcall(?:OrNotify)?\("([a-z_]+)"', js))
-    publicos = {n for n in dir(fa.Api) if not n.startswith("_")}
-    assert chamadas, "nenhuma chamada encontrada (regex desatualizada?)"
-    assert chamadas <= publicos, f"metodos inexistentes na Api: {sorted(chamadas - publicos)}"
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js nao esta instalado")
-def test_javascript_sem_erro_de_sintaxe():
-    for arquivo in ("app.js", "dev/mock.js"):
-        resultado = subprocess.run(["node", "--check", str(WEB / arquivo)], capture_output=True, text=True)
-        assert resultado.returncode == 0, resultado.stderr
-
-
 def test_api_nao_expoe_estado_interno_ao_javascript():
-    """O pywebview expoe todo atributo publico; estado interno deve comecar com '_'."""
+    """Todo atributo publico da Api vira metodo do motor; estado interno comeca com '_'."""
     instancia = fa.Api()
     publicos = [n for n in vars(instancia) if not n.startswith("_")]
     assert publicos == []

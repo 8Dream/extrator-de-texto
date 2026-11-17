@@ -16,7 +16,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
-WEB = SRC / "web"
 sys.path.insert(0, str(SRC))
 
 import extrator_core as core  # noqa: E402
@@ -25,67 +24,39 @@ import semjanela  # noqa: E402
 import transcricao_core as transcricao  # noqa: E402
 
 
-def _web_files():
-    return [p for p in WEB.rglob("*") if p.suffix in {".js", ".html"}]
+# ------------------------------------------------------------------ nada de janela
+
+UI_SRC = ROOT / "ui" / "src"
+PROIBIDOS_PY = ("tkinter", "messagebox", "MessageBox", "create_confirmation_dialog", "create_alert",
+                "create_file_dialog", "import webview", "pywebview")
 
 
-# ------------------------------------------------------------ JavaScript / HTML
-
-
-@pytest.mark.parametrize("arquivo", _web_files(), ids=lambda p: p.name)
-def test_web_sem_alert_confirm_prompt_nem_janela_nova(arquivo):
-    texto = arquivo.read_text(encoding="utf-8")
-    texto = re.sub(r"/\*.*?\*/", "", texto, flags=re.S)  # comentarios de bloco
-    texto = re.sub(r"(?m)^\s*//.*$", "", texto)  # comentarios de linha inteira
-    proibidos = {
-        "alert/confirm/prompt": r"(?<![\w$.])(?:window\.)?(?:alert|confirm|prompt)\s*\(",
-        "window.open": r"\bwindow\.open\s*\(|(?<![\w$.])open\s*\(\s*['\"`]http",
-        "showModalDialog": r"showModalDialog",
-        "<dialog>": r"<dialog\b|\.showModal\s*\(|\.show\s*\(\s*\)",
-        "link em nova janela": r"target\s*=\s*[\"']?_blank",
-        "onbeforeunload": r"onbeforeunload|beforeunload",
-    }
-    for nome, padrao in proibidos.items():
-        achado = re.search(padrao, texto)
-        assert not achado, f"{arquivo.name}: {nome} proibido ({achado.group(0)!r})"
-
-
-# ----------------------------------------------------------------------- Python
-
-
-def test_so_uma_janela_e_sem_dialogos_do_pywebview():
-    fonte = (SRC / "extrator.py").read_text(encoding="utf-8")
-    assert fonte.count("webview.create_window(") == 1
+def test_codigo_python_sem_caixa_de_dialogo_nem_webview():
     for nome in SRC.glob("*.py"):
         texto = nome.read_text(encoding="utf-8")
-        assert "create_confirmation_dialog" not in texto, nome.name
-        assert "messagebox" not in texto, nome.name
-        assert "create_alert" not in texto, nome.name
+        for proibido in PROIBIDOS_PY:
+            if nome.name == "semjanela.py" and proibido in ("MessageBox", "messagebox"):
+                continue
+            if nome.name == "extrator_core.py" and proibido == "tkinter":
+                continue  # so o modo terminal (CLI) usa seletores tkinter; o motor e a Api nunca os chamam
+            assert proibido not in texto, f"{nome.name}: {proibido!r}"
 
 
-def test_messagebox_nativa_so_na_falha_de_inicializacao():
-    """Unico pop-up que sobra e inevitavel: se nem a janela abre, nao ha onde avisar."""
-    arvore = ast.parse((SRC / "extrator.py").read_text(encoding="utf-8"))
-    usos = []
-    for funcao in ast.walk(arvore):
-        if isinstance(funcao, ast.FunctionDef):
-            if "MessageBoxW" in ast.unparse(funcao):
-                usos.append(funcao.name)
-    assert usos == ["_fatal"]
-    for nome in ("extrator_api.py", "extrator_core.py", "transcricao_core.py"):
-        assert "MessageBox" not in (SRC / nome).read_text(encoding="utf-8")
+def test_nao_ha_pagina_web_antiga():
+    assert not (SRC / "web").exists()
+    assert not (SRC / "extrator.py").exists()
 
 
-def test_dialogos_de_arquivo_so_nos_metodos_de_escolha_do_usuario():
-    """create_file_dialog so e chamado por Api._dialog, usado apenas por pick_*."""
-    texto = (SRC / "extrator_api.py").read_text(encoding="utf-8")
-    assert texto.count("create_file_dialog") == 1
-    chamadores = re.findall(r"def (\w+)\(self[^)]*\)[^\n]*\n(?:(?!    def ).*\n)*?.*self\._dialog\(", texto)
-    assert set(chamadores) <= {"pick_files", "pick_folder"}
+def test_interface_nativa_sem_message_box():
+    if not UI_SRC.is_dir():
+        pytest.skip("interface Rust ausente")
+    for arquivo in UI_SRC.rglob("*.rs"):
+        texto = arquivo.read_text(encoding="utf-8", errors="replace")
+        assert "MessageBox" not in texto and "MessageDialog" not in texto, arquivo.name
 
 
-def test_extrator_instala_o_patch_antes_dos_outros_imports():
-    linhas = (SRC / "extrator.py").read_text(encoding="utf-8").splitlines()
+def test_motor_instala_o_patch_antes_dos_outros_imports():
+    linhas = (SRC / "motor.py").read_text(encoding="utf-8").splitlines()
     imports = [i for i, l in enumerate(linhas) if re.match(r"(import|from) ", l) and "__future__" not in l]
     assert linhas[imports[0]].strip() == "import semjanela"
     chamada = next(i for i, l in enumerate(linhas) if l.strip() == "semjanela.instalar()")
@@ -197,8 +168,9 @@ def test_verificacao_roda_em_thread_e_emite_linhas_e_resultado(api, monkeypatch)
     assert [e["type"] for e in eventos] == ["check_start", "check_row", "check_row", "check_row", "check_done"]
     assert [e["name"] for e in eventos if e["type"] == "check_row"] == ["Python", "Rich", "Modelo de transcricao"]
     final = eventos[-1]
-    assert [r["ok"] for r in final["rows"]] == [True, False, False]
-    assert final["rows"][0] == {"name": "Python", "ok": True, "detail": "3.14"}
+    assert [r["ok"] for r in final["rows"]] == [True, False, True]  # o modelo ausente e aviso
+    assert [r["estado"] for r in final["rows"]] == ["ok", "falha", "aviso"]
+    assert final["rows"][0] == {"name": "Python", "ok": True, "estado": "ok", "detail": "3.14"}
     assert final["missing_pip"] == ["Rich"] and final["missing_model"] is True
 
 
@@ -240,20 +212,12 @@ def test_verificacao_real_devolve_os_componentes_esperados(api):
     assert final["type"] == "check_done", final
     nomes = {r["name"] for r in final["rows"]}
     esperados = {"Python", "MarkItDown", "PyMuPDF", "pytesseract", "Pillow", "OCRmyPDF", "Rich",
-                 "pywebview", "Tesseract", "Idiomas OCR", "Ghostscript (PDF/A)"}
+                 "Tesseract", "Idiomas OCR", "Ghostscript (PDF/A)"}
     assert esperados <= nomes
-    assert all(set(r) == {"name", "ok", "detail"} for r in final["rows"])
+    assert "pywebview" not in nomes
+    assert all(set(r) == {"name", "ok", "estado", "detail"} for r in final["rows"])
 
 
-def test_fechar_com_trabalho_so_avisa_dentro_da_janela(api):
-    api.notify_close_blocked()
-    assert api.drain_events() == [{"type": "close_blocked"}]
-
-
-def test_interface_tem_retorno_visivel_para_a_verificacao():
-    js = (WEB / "app.js").read_text(encoding="utf-8")
-    html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert "start_check_installation" in js
-    for evento in ("check_start", "check_row", "check_done", "check_error", "close_blocked"):
-        assert f'case "{evento}"' in js
-    assert "Verificando" in js and 'id="checkLine"' in html
+def test_motor_e_api_nao_importam_tkinter():
+    for nome in ("motor.py", "extrator_api.py", "transcricao_core.py", "execucoes.py"):
+        assert "tkinter" not in (SRC / nome).read_text(encoding="utf-8"), nome

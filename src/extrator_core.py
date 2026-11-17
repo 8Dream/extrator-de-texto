@@ -54,7 +54,7 @@ try:
     from rich.table import Table
     from rich.text import Text
 except ImportError:
-    print("Dependencias ausentes. Execute Instalar.bat antes de abrir o programa.")
+    print("Dependencias ausentes. Use o atalho 'Reparar instalacao' do Menu Iniciar.")
     raise SystemExit(2)
 
 APP_NAME = "Extrator de Texto"
@@ -90,7 +90,6 @@ PIP_REQUIREMENTS = {
     "Pillow": "Pillow>=11,<13",
     "OCRmyPDF": "ocrmypdf>=17.8,<18",
     "Rich": "rich>=13.9,<15",
-    "pywebview": "pywebview>=6,<7",
 }
 
 console = Console(highlight=False)
@@ -432,12 +431,12 @@ def ensure_ocr_ready() -> tuple[Path, list[str]]:
     executable, languages = configure_tesseract()
     if executable is None:
         raise RuntimeError(
-            "Tesseract OCR nao foi encontrado. Execute Instalar.bat ou instale o Tesseract antes de usar OCR."
+            "Tesseract OCR nao foi encontrado. Use o atalho 'Reparar instalacao' do Menu Iniciar ou instale o Tesseract antes de usar OCR."
         )
     missing = required_languages(str(CONFIG["language"])) - set(languages)
     if missing:
         raise RuntimeError(
-            "Pacotes de idioma ausentes no Tesseract: " + ", ".join(sorted(missing)) + ". Execute Instalar.bat novamente."
+            "Pacotes de idioma ausentes no Tesseract: " + ", ".join(sorted(missing)) + ". Use o atalho 'Reparar instalacao' do Menu Iniciar."
         )
     return executable, languages
 
@@ -1063,7 +1062,7 @@ def searchable_pdf(
     if str(CONFIG.get("pdf_output_type")) == "pdfa" and find_ghostscript() is None:
         raise RuntimeError(
             "O formato PDF/A requer o Ghostscript, que nao foi encontrado neste computador. "
-            "Instale o Ghostscript (Instalar.bat tenta isso automaticamente) ou troque o "
+            "Instale o Ghostscript (a instalacao tenta isso automaticamente) ou troque o "
             "'Tipo de PDF' para 'pdf' nas Configuracoes."
         )
     output_folder.mkdir(parents=True, exist_ok=True)
@@ -1226,7 +1225,7 @@ def diagnose_file(path: Path) -> None:
     console.print(table)
 
 
-INSTALLATION_ROW_COUNT = 11  # linhas de iter_installation_rows (total conhecido da verificacao)
+INSTALLATION_ROW_COUNT = 10  # linhas de iter_installation_rows (total conhecido da verificacao)
 
 
 def iter_installation_rows():
@@ -1254,7 +1253,6 @@ def iter_installation_rows():
         ("Pillow", "PIL"),
         ("OCRmyPDF", "ocrmypdf"),
         ("Rich", "rich"),
-        ("pywebview", "webview"),
     ]:
         try:
             __import__(import_name)

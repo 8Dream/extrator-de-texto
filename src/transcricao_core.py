@@ -66,23 +66,107 @@ def format_hhmmss(segundos: float) -> str:
 # ============================================================
 
 _ffmpeg_paths_added = False
+_ffmpeg_lock = threading.Lock()
+_ffmpeg_falha_em: Optional[float] = None
+FFMPEG_NOVA_TENTATIVA_S = 30  # depois de uma falha (sem internet), so tenta de novo apos este intervalo
+
+
+def _ffmpeg_ja_baixado(static_ffmpeg_run) -> bool:
+    """True quando o static-ffmpeg ja tem o binario no disco (nada a baixar)."""
+    try:
+        return (Path(static_ffmpeg_run.get_platform_dir()) / "installed.crumb").exists()
+    except Exception:
+        return False
+
+
+def _baixador_com_progresso(ex, cancel: threading.Event):
+    """Substitui static_ffmpeg.run.download_file: baixa em blocos reportando os
+    bytes a execucao `ex` (nada vai para stdout/console)."""
+
+    def download_file(url: str, local_path: str) -> str:
+        import requests
+
+        ex.log(f"Baixando {url}")
+        try:
+            with requests.get(url, stream=True, timeout=(15, 60)) as resp:
+                resp.raise_for_status()
+                try:
+                    total = int(resp.headers.get("content-length") or 0)
+                except ValueError:
+                    total = 0
+                if total > 0:
+                    ex.definir_total(total, "byte", "bytes")
+                feito = 0
+                with open(local_path, "wb") as arquivo:
+                    for bloco in resp.iter_content(256 * 1024):
+                        if cancel.is_set():
+                            raise core.OperationCancelled("Download do ffmpeg cancelado.")
+                        arquivo.write(bloco)
+                        feito += len(bloco)
+                        if total > 0:
+                            ex.avancar(feito)
+        except BaseException:
+            try:
+                os.remove(local_path)  # nao deixa um .zip pela metade
+            except OSError:
+                pass
+            raise
+        ex.definir_etapa("Extraindo o ffmpeg", registrar=True)
+        return local_path
+
+    return download_file
+
+
+def _baixar_ffmpeg(static_ffmpeg) -> None:
+    """Primeiro uso: o download (~72 MB) vira uma execucao visivel na Central."""
+    from static_ffmpeg import run as sf_run
+
+    reg = execucoes.REGISTRO
+    ex = reg.criar("instalacao", "Baixando ffmpeg", "static-ffmpeg (~72 MB, só na primeira vez)", variante="ffmpeg")
+    cancel = threading.Event()
+    ex.definir_cancelamento(cancel.set)
+    original = sf_run.download_file
+    with reg.executar(ex):
+        ex.definir_etapa("Baixando ffmpeg", registrar=True)
+        sf_run.download_file = _baixador_com_progresso(ex, cancel)
+        try:
+            static_ffmpeg.add_paths()
+        except core.OperationCancelled:
+            ex.cancelar("Download do ffmpeg cancelado.")
+            raise
+        finally:
+            sf_run.download_file = original
+        ex.concluir("ffmpeg pronto.")
 
 
 def _garantir_ffmpeg_no_path() -> None:
-    """Baixa (na primeira vez) e adiciona ao PATH o ffmpeg/ffprobe obtidos
-    via pip (pacote static-ffmpeg) - nada de .exe empacotado manualmente no
-    repositorio nem instalado via winget; e apenas mais uma dependencia
-    Python, resolvida por pip install."""
-    global _ffmpeg_paths_added
+    """Adiciona ao PATH o ffmpeg/ffprobe obtidos via pip (pacote static-ffmpeg) -
+    nada de .exe empacotado manualmente no repositorio nem instalado via winget;
+    e apenas mais uma dependencia Python. Na primeira vez o pacote baixa o
+    binario: isso acontece como execucao visivel ("Baixando ffmpeg"). Se falhar
+    (sem internet), uma nova tentativa so ocorre depois de FFMPEG_NOVA_TENTATIVA_S."""
+    global _ffmpeg_paths_added, _ffmpeg_falha_em
     if _ffmpeg_paths_added:
         return
-    try:
-        import static_ffmpeg
-
-        static_ffmpeg.add_paths()
-    except Exception:
-        pass
-    _ffmpeg_paths_added = True
+    with _ffmpeg_lock:
+        if _ffmpeg_paths_added:
+            return
+        if _ffmpeg_falha_em is not None and time.monotonic() - _ffmpeg_falha_em < FFMPEG_NOVA_TENTATIVA_S:
+            return
+        try:
+            import static_ffmpeg
+            from static_ffmpeg import run as sf_run
+        except Exception:
+            _ffmpeg_paths_added = True  # pacote ausente: nada a fazer
+            return
+        try:
+            if _ffmpeg_ja_baixado(sf_run):
+                static_ffmpeg.add_paths()
+            else:
+                _baixar_ffmpeg(static_ffmpeg)
+            _ffmpeg_paths_added = True
+        except Exception:
+            _ffmpeg_falha_em = time.monotonic()
 
 
 def verificar_ffmpeg() -> Optional[str]:
@@ -153,7 +237,7 @@ def iter_installation_rows():
     yield (
         "Modelo de transcricao",
         bool(instalados),
-        ", ".join(instalados) if instalados else "nenhum (sera baixado no 1o uso)",
+        ", ".join(instalados) if instalados else "nenhum (será baixado no 1º uso)",
     )
 
 
@@ -422,7 +506,7 @@ def transcrever_com_progresso(
         heartbeat.fase("verificando ffmpeg")
         ffmpeg_path = verificar_ffmpeg()
         if ffmpeg_path is None:
-            raise RuntimeError("ffmpeg nao encontrado. Reinstale o programa (Instalar.bat).")
+            raise RuntimeError("ffmpeg nao encontrado. Use o atalho 'Reparar instalacao' do Menu Iniciar.")
 
         arquivo_original = arquivo
         arquivo_para_transcrever = arquivo

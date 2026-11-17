@@ -109,6 +109,10 @@ def _hms(segundos: float) -> str:
     return f"{s // 3600:02d}:{s // 60 % 60:02d}:{s % 60:02d}"
 
 
+def _mb(n_bytes: float) -> str:
+    return f"{n_bytes / 1048576:.1f}".replace(".", ",") + " MB"
+
+
 def _data(epoch: float | None) -> str:
     return datetime.fromtimestamp(epoch).strftime("%Y-%m-%d %H:%M:%S") if epoch else ""
 
@@ -460,6 +464,8 @@ class Execucao:
             return self._texto_prog
         if formato == "duracao":
             return f"{_hms(atual)} de {_hms(total)}"
+        if formato == "bytes":
+            return f"{_mb(atual)} de {_mb(total)}"
         return f"{int(atual)} de {int(total)} {_plural(unidade, total)}".strip()
 
     # ---------------------------------------------------------------- saidas
