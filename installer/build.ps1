@@ -15,11 +15,18 @@ $Cargo = @((Get-Command cargo.exe -ErrorAction SilentlyContinue | Select-Object 
 if (-not $Cargo) { throw "cargo nao encontrado (instale o Rust: https://rustup.rs)." }
 $env:PATH = (Split-Path -Parent $Cargo) + ";" + $env:PATH
 # Toolchain GNU (ui\rust-toolchain.toml): precisa do gcc e do windres do MinGW-w64 (WinLibs, open source).
-if (-not (Get-Command windres.exe -ErrorAction SilentlyContinue)) {
-    $Mingw = Get-ChildItem (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages") -Filter "BrechtSanders.WinLibs*" -Directory -ErrorAction SilentlyContinue |
-        ForEach-Object { Join-Path $_.FullName "mingw64\bin" } | Where-Object { Test-Path (Join-Path $_ "windres.exe") } | Select-Object -First 1
-    if (-not $Mingw) { throw "MinGW-w64 nao encontrado (winget install BrechtSanders.WinLibs.POSIX.UCRT)." }
+# O bin do WinLibs entra SEMPRE na frente do PATH (o runner do GitLab pode ter outro windres no PATH
+# sem o dlltool, e o rustc falha com "error calling dlltool").
+$Mingw = @(
+    (Get-ChildItem (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages") -Filter "BrechtSanders.WinLibs*" -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { Join-Path $_.FullName "mingw64\bin" }),
+    "C:\mingw64\bin", "C:\msys64\mingw64\bin"
+) | Where-Object { $_ -and (Test-Path (Join-Path $_ "dlltool.exe")) -and (Test-Path (Join-Path $_ "windres.exe")) } | Select-Object -First 1
+if ($Mingw) {
     $env:PATH = "$Mingw;$env:PATH"
+    Write-Host "MinGW-w64: $Mingw"
+} elseif (-not ((Get-Command dlltool.exe -ErrorAction SilentlyContinue) -and (Get-Command windres.exe -ErrorAction SilentlyContinue))) {
+    throw "MinGW-w64 (dlltool e windres) nao encontrado (winget install BrechtSanders.WinLibs.POSIX.UCRT)."
 }
 $BuildDir = Join-Path $Root "build"
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
