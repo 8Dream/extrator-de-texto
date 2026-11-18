@@ -30,12 +30,12 @@ EXTENSOES = (".log", ".txt")
 def nome_valido(pasta: Path, nome: str) -> Path:
     """Resolve `nome` dentro de `pasta`; recusa qualquer caminho fora dela."""
     if not nome or Path(nome).name != nome or Path(nome).suffix.lower() not in EXTENSOES:
-        raise ValueError("Nome de log inválido.")
+        raise ValueError("Nome de registro inválido.")
     caminho = (pasta / nome).resolve()
     if caminho.parent != pasta.resolve():
-        raise ValueError("Nome de log inválido.")
+        raise ValueError("Nome de registro inválido.")
     if not caminho.is_file():
-        raise FileNotFoundError("Esse arquivo de log não existe mais.")
+        raise FileNotFoundError("Esse arquivo de registro não existe mais.")
     return caminho
 
 

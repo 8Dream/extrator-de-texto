@@ -38,6 +38,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+import mensagens
+
 ESTADOS = ("fila", "rodando", "concluida", "falhou", "cancelada", "interrompida")
 ATIVOS = ("fila", "rodando")
 ESTADO_TEXTO = {
@@ -571,7 +573,7 @@ class Execucao:
         if d["erro"]:
             partes.append(f"Erro: {d['erro']}")
         if d["log_arquivo"]:
-            partes.append(f"Log: {d['log_arquivo']} (bytes {d['log_ini']} a {d['log_fim'] or 'atual'})")
+            partes.append(f"Registro: {d['log_arquivo']} (bytes {d['log_ini']} a {d['log_fim'] or 'atual'})")
         partes.append(f"ID: {d['id']}")
         with self._reg._lock:
             ultimas = list(self.linhas)[-15:]
@@ -652,7 +654,7 @@ class Registro:
             yield ex
         except BaseException as exc:
             if ex.ativo:
-                ex.falhar(str(exc) or exc.__class__.__name__)
+                ex.falhar(mensagens.erro_usuario(exc))
             raise
         else:
             if ex.ativo:
@@ -804,7 +806,7 @@ class Registro:
                             raise
                         time.sleep(0.03)
         except Exception:  # historico e conveniencia: nunca derruba a tarefa
-            _log.exception("Falha ao gravar o historico de execucoes")
+            _log.exception("Falha ao gravar o histórico de execuções")
 
     def _carregar(self) -> None:
         caminho = self.arquivo
@@ -815,7 +817,7 @@ class Registro:
             if not isinstance(dados, dict):
                 raise ValueError("formato inesperado")
         except Exception:
-            _log.warning("Historico de execucoes ilegivel; sera recriado.", exc_info=True)
+            _log.warning("Histórico de execuções ilegível; será recriado.", exc_info=True)
             with contextlib.suppress(Exception):
                 os.replace(caminho, caminho.with_name(caminho.name + ".corrompido"))
             return

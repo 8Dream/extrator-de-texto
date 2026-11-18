@@ -496,7 +496,7 @@ impl App {
                 for (rot, pg) in [
                     ("Lote", Pagina::Lote),
                     ("Diagnóstico", Pagina::Diagnostico),
-                    ("Log", Pagina::Log),
+                    ("Registro", Pagina::Log),
                 ] {
                     if btn(rot).link().pequeno().mostrar(ui, &pal).clicked() {
                         app.mostrar(pg);
@@ -728,7 +728,7 @@ impl App {
                         }
                         if !ex.log_arquivo.is_empty()
                             && ex.log_ini.is_some()
-                            && btn("Ver log").link().pequeno().mostrar(ui, &pal).clicked()
+                            && btn("Ver registro").link().pequeno().mostrar(ui, &pal).clicked()
                         {
                             acao = Some(AcaoLinha::VerLog(Box::new(ex.clone())));
                         }

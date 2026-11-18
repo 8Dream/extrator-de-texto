@@ -63,7 +63,7 @@ pub fn mensagem_final(codigo: i32) -> String {
     if codigo == 0 {
         "Concluído. Já pode abrir o Extrator de Texto.".to_string()
     } else {
-        format!("A instalação falhou (código {codigo}). Veja o motivo no log abaixo.")
+        format!("A instalação falhou (código {codigo}). Veja o motivo no registro abaixo.")
     }
 }
 

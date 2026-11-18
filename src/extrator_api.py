@@ -25,6 +25,7 @@ from pathlib import Path
 import extrator_core as core
 import execucoes
 import leitorlog
+import mensagens
 import transcricao_core as transcricao
 
 CONVERT_MODES = [
@@ -105,7 +106,7 @@ def _safe(func):
             return func(self, *args, **kwargs)
         except Exception as exc:  # noqa: BLE001 - fronteira com a interface
             logging.exception("Erro em Api.%s", func.__name__)
-            return {"ok": False, "error": str(exc) or exc.__class__.__name__}
+            return {"ok": False, "error": mensagens.erro_usuario(exc)}
 
     return wrapper
 
@@ -144,7 +145,7 @@ _NIVEIS_LOG = {"ERROR": logging.ERROR, "WARNING": logging.WARNING, "INFO": loggi
 
 # Verificacao da instalacao: o que esta ausente mas NAO e defeito vira "aviso"
 # (conta como ok=True): o modelo de transcricao e baixado no 1o uso.
-_LINHA_MODELO = "Modelo de transcricao"
+_LINHA_MODELO = "Modelo de transcrição"
 _AVISOS_OPCIONAIS = {_LINHA_MODELO}
 _AVISO_DETALHE = {
     _LINHA_MODELO: "será baixado no 1º uso",
@@ -282,13 +283,13 @@ class Api:
                 try:
                     info = core.get_pdf_info(path)
                 except Exception as exc:
-                    return _error(f"Não foi possível ler {path.name}: {exc}")
+                    return _error(f"Não foi possível ler {path.name}: {mensagens.erro_usuario(exc)}")
                 if info.get("encrypted"):
                     return _error(f"{path.name} está protegido por senha.")
                 try:
                     core.parse_page_range(page_spec, int(info["pages"]))
                 except ValueError as exc:
-                    return _error(f"{path.name}: {exc}")
+                    return _error(f"{path.name}: {mensagens.erro_usuario(exc)}")
 
         invalidate = False
         if mode_key in SEARCHABLE_MODE_KEYS:
@@ -344,7 +345,7 @@ class Api:
     @staticmethod
     def _concluir_itens(ex, total: int, falhas: int) -> None:
         if total and falhas >= total:
-            ex.falhar(f"Todos os {total} arquivo(s) falharam. Veja o log da execução.")
+            ex.falhar(f"Todos os {total} arquivo(s) falharam. Veja o registro da execução.")
         elif falhas:
             ex.concluir(f"{total - falhas} de {total} arquivo(s) processado(s); {falhas} com falha.", avisos=falhas)
         else:
@@ -379,8 +380,8 @@ class Api:
                         except Exception as exc:
                             falhas += 1
                             logging.exception("Falha ao processar %s", path)
-                            ex.log(f"FALHA em {path.name}: {exc}", "erro")
-                            self._emit(type="file_error", name=path.name, text=str(exc))
+                            ex.log(f"FALHA em {path.name}: {mensagens.erro_usuario(exc)}", "erro")
+                            self._emit(type="file_error", name=path.name, text=mensagens.erro_usuario(exc))
                         ex.avancar_geral(index)
                     self._concluir_itens(ex, total, falhas)
                 self._emit(type="done")
@@ -389,8 +390,8 @@ class Api:
                 self._emit(type="cancelled")
             except Exception as exc:
                 logging.exception("Erro na conversão: %s", exc)
-                ex.falhar(str(exc) or exc.__class__.__name__)
-                self._emit(type="error", text=str(exc))
+                ex.falhar(mensagens.erro_usuario(exc))
+                self._emit(type="error", text=mensagens.erro_usuario(exc))
 
     def _convert_one(self, mode_key, path, folder, page_spec, output_format, invalidate) -> None:
         cancel = self._cancel
@@ -441,8 +442,8 @@ class Api:
             try:
                 files, _input, output = self._batch_files(params)
             except ValueError as exc:
-                ex.falhar(str(exc))
-                return _error(str(exc))
+                ex.falhar(mensagens.erro_usuario(exc))
+                return _error(mensagens.erro_usuario(exc))
             signed = []
             if params.get("mode") in SEARCHABLE_BATCH_KEYS:
                 ex.definir_etapa("Verificando assinaturas digitais")
@@ -465,7 +466,7 @@ class Api:
         try:
             files, _input, output = self._batch_files(params)
         except ValueError as exc:
-            return _error(str(exc))
+            return _error(mensagens.erro_usuario(exc))
         if not files:
             return _error("Nenhum arquivo compatível encontrado nessa pasta.")
         invalidate = False
@@ -519,8 +520,8 @@ class Api:
                     except Exception as exc:
                         falhas += 1
                         logging.exception("Falha no lote: %s", path)
-                        ex.log(f"FALHA em {path.name}: {exc}", "erro")
-                        self._emit(type="file_error", name=path.name, text=str(exc))
+                        ex.log(f"FALHA em {path.name}: {mensagens.erro_usuario(exc)}", "erro")
+                        self._emit(type="file_error", name=path.name, text=mensagens.erro_usuario(exc))
                     ex.avancar_geral(index)
                 self._concluir_itens(ex, total, falhas)
                 self._emit(type="done")
@@ -529,8 +530,8 @@ class Api:
                 self._emit(type="cancelled")
             except Exception as exc:
                 logging.exception("Erro no lote: %s", exc)
-                ex.falhar(str(exc) or exc.__class__.__name__)
-                self._emit(type="error", text=str(exc))
+                ex.falhar(mensagens.erro_usuario(exc))
+                self._emit(type="error", text=mensagens.erro_usuario(exc))
 
     # ------------------------------------------------------------ transcricao
 
@@ -649,8 +650,8 @@ class Api:
                         break
                 except Exception as exc:
                     logging.exception("Falha na transcrição de %s", path)
-                    ex.falhar(str(exc) or exc.__class__.__name__)
-                    self._emit(type="transc_item_error", id=item["id"], text=str(exc))
+                    ex.falhar(mensagens.erro_usuario(exc))
+                    self._emit(type="transc_item_error", id=item["id"], text=mensagens.erro_usuario(exc))
         for ex, _evento in execs:  # o que sobrou na fila quando ela foi cancelada
             if ex.ativo:
                 ex.cancelar("Fila cancelada antes de chegar a vez deste arquivo.")
@@ -699,8 +700,8 @@ class Api:
                     self._emit(type="model_download", name=name, status="done")
                 except Exception as exc:
                     logging.exception("Falha ao baixar modelo %s", name)
-                    ex.falhar(str(exc) or exc.__class__.__name__)
-                    self._emit(type="model_download", name=name, status="error", text=str(exc))
+                    ex.falhar(mensagens.erro_usuario(exc))
+                    self._emit(type="model_download", name=name, status="error", text=mensagens.erro_usuario(exc))
 
         self._download_thread = threading.Thread(target=worker, daemon=True)
         self._download_thread.start()
@@ -841,8 +842,8 @@ class Api:
                 self._emit(type="check_done", **resumo)
             except Exception as exc:  # noqa: BLE001
                 logging.exception("Falha ao verificar a instalação")
-                ex.falhar(str(exc) or exc.__class__.__name__)
-                self._emit(type="check_error", text=str(exc) or exc.__class__.__name__)
+                ex.falhar(mensagens.erro_usuario(exc))
+                self._emit(type="check_error", text=mensagens.erro_usuario(exc))
 
     @_safe
     def install_missing(self) -> dict:
@@ -883,8 +884,8 @@ class Api:
                     self._linha(ex, f"{name} instalado com sucesso.")
                 except subprocess.CalledProcessError as exc:
                     falhas += 1
-                    self._emit(type="line", text=f"Falha ao instalar {name}: {(exc.stderr or str(exc))[-600:]}")
-                    ex.log(f"Falha ao instalar {name}: {(exc.stderr or str(exc))[-600:]}", "erro")
+                    self._emit(type="line", text=f"Falha ao instalar {name}: {mensagens.erro_usuario((exc.stderr or mensagens.erro_usuario(exc))[-600:], "instalar " + name)}")
+                    ex.log(f"Falha ao instalar {name}: {mensagens.erro_usuario((exc.stderr or mensagens.erro_usuario(exc))[-600:], "instalar " + name)}", "erro")
                 feitos += 1
                 ex.avancar_geral(feitos)
             if missing_model and not cancel.is_set():
@@ -895,14 +896,14 @@ class Api:
                     self._linha(ex, "Modelo pronto.")
                 except Exception as exc:
                     falhas += 1
-                    self._emit(type="line", text=f"Falha ao baixar o modelo: {exc}")
-                    ex.log(f"Falha ao baixar o modelo: {exc}", "erro")
+                    self._emit(type="line", text=f"Falha ao baixar o modelo: {mensagens.erro_usuario(exc)}")
+                    ex.log(f"Falha ao baixar o modelo: {mensagens.erro_usuario(exc)}", "erro")
                 feitos += 1
                 ex.avancar_geral(feitos)
             if cancel.is_set() and feitos < total:
                 ex.cancelar(f"Cancelada: {feitos} de {total} componente(s) tratado(s).")
             elif total and falhas >= total:
-                ex.falhar("Nenhum componente foi instalado. Veja o log da execução.")
+                ex.falhar("Nenhum componente foi instalado. Veja o registro da execução.")
             elif falhas:
                 ex.concluir(f"{total - falhas} de {total} componente(s) instalado(s); {falhas} com falha.", avisos=falhas)
             else:
@@ -911,10 +912,10 @@ class Api:
 
     @_safe
     def clear_data(self) -> dict:
-        with self._reg.tarefa("limpeza", "Limpar cache e logs", str(core.APP_DATA_DIR), instantanea=True) as ex:
-            ex.definir_etapa("Removendo logs antigos e cache de retomada do OCR")
+        with self._reg.tarefa("limpeza", "Limpar cache e registros", str(core.APP_DATA_DIR), instantanea=True) as ex:
+            ex.definir_etapa("Removendo registros antigos e cache de retomada do OCR")
             logs, jobs = core.cleanup_data(retention_days=0)
-            ex.concluir(f"Removidos {logs} log(s) e {jobs} pasta(s) de cache.")
+            ex.concluir(f"Removidos {logs} registro(s) e {jobs} pasta(s) de cache.")
         return {"ok": True, "logs": logs, "jobs": jobs}
 
     # ----------------------------------------------------- central de execucoes
@@ -978,7 +979,7 @@ class Api:
         try:
             caminho = leitorlog.nome_valido(core.LOG_DIR, nome)
         except (ValueError, FileNotFoundError) as exc:
-            return _error(str(exc))
+            return _error(mensagens.erro_usuario(exc))
         ao_vivo = nome == core.SESSION_LOG.name
         modo = params.get("modo") or "cauda"
         maximo = int(params.get("max_bytes") or leitorlog.TAMANHO_TRECHO)
@@ -1002,7 +1003,7 @@ class Api:
         try:
             caminho = leitorlog.nome_valido(core.LOG_DIR, nome)
         except (ValueError, FileNotFoundError) as exc:
-            return _error(str(exc))
+            return _error(mensagens.erro_usuario(exc))
         res = leitorlog.buscar(caminho, str(params.get("nivel") or "tudo"), str(params.get("texto") or ""),
                                int(params.get("limite") or 2000))
         return {**res, "ao_vivo": nome == core.SESSION_LOG.name}

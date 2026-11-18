@@ -48,6 +48,8 @@ import threading  # noqa: E402
 import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
+import mensagens  # noqa: E402
+
 # Metodos da Api expostos (mesmos nomes e argumentos da Api atual).
 METODOS_API = (
     "bootstrap", "drain_events", "is_busy", "request_stop_all", "open_path", "open_data_folder",
@@ -145,7 +147,7 @@ def _job_object_mata_filhos() -> None:
         if k32.AssignProcessToJobObject(job, k32.GetCurrentProcess()):
             _job = job
     except Exception:
-        logging.debug("Job Object indisponivel", exc_info=True)
+        logging.debug("Job Object indisponível", exc_info=True)
 
 
 class _EntradaPipeWindows:
@@ -200,7 +202,7 @@ def _abrir_entrada():
             if entrada.e_pipe():
                 return entrada
         except Exception:
-            logging.debug("Leitura por PeekNamedPipe indisponivel", exc_info=True)
+            logging.debug("Leitura por PeekNamedPipe indisponível", exc_info=True)
     return sys.stdin.buffer
 
 
@@ -245,7 +247,7 @@ def _cancelar_tudo() -> None:
             if ex.get("cancelavel"):
                 execucoes.REGISTRO.cancelar(ex["id"])
     except Exception:
-        logging.exception("Falha ao cancelar execucoes")
+        logging.exception("Falha ao cancelar execuções")
 
 
 def _esperar_inativo() -> None:
@@ -264,7 +266,7 @@ def _esperar_inativo() -> None:
 
 def _sair(codigo: int = 0) -> None:
     try:
-        logging.info("Motor encerrando (codigo %s)", codigo)
+        logging.info("Motor encerrando (código %s)", codigo)
         logging.shutdown()
     except Exception:
         pass
@@ -325,7 +327,7 @@ def _executar(rid, nome: str, funcao, args: list) -> None:
         _ok(rid, funcao(*args))
     except Exception as exc:  # noqa: BLE001 - fronteira do protocolo
         logging.exception("Erro em %s", nome)
-        _erro(rid, str(exc) or exc.__class__.__name__)
+        _erro(rid, mensagens.erro_usuario(exc))
 
 
 def _tratar(linha: bytes, tabela: dict) -> None:
@@ -381,7 +383,7 @@ def main() -> None:
         tabela = _tabela_metodos()
     except Exception as exc:  # noqa: BLE001
         logging.exception("Falha ao iniciar o motor")
-        _erro(None, f"Falha ao iniciar o motor: {exc}")
+        _erro(None, f"Falha ao iniciar o motor: {mensagens.erro_usuario(exc)}")
         _sair(1)
         return
     logging.info("Motor iniciado (pid %s)", os.getpid())
@@ -399,8 +401,8 @@ def main() -> None:
         try:
             _tratar(linha, tabela)
         except Exception as exc:  # noqa: BLE001 - uma linha ruim nao derruba o motor
-            logging.exception("Falha ao tratar a requisicao")
-            _erro(None, f"Erro interno: {exc}")
+            logging.exception("Falha ao tratar a requisição")
+            _erro(None, f"Erro interno: {mensagens.erro_usuario(exc)}")
 
 
 if __name__ == "__main__":

@@ -485,7 +485,7 @@ impl App {
                 nivel: 0,
                 busca: String::new(),
                 auto: true,
-                info: "Abra a tela para carregar o log.".into(),
+                info: "Abra a tela para carregar o registro.".into(),
                 em_voo: false,
                 ultimo: longe(),
                 pendente: None,
@@ -1034,7 +1034,7 @@ impl App {
                 self.terminar_acao("log_pasta");
                 match r {
                     Ok(_) => self.notificar(
-                        "Pasta dos logs aberta no Explorador de Arquivos.",
+                        "Pasta dos registros aberta no Explorador de Arquivos.",
                         TipoAviso::Info,
                     ),
                     Err(e) => self.notificar(&e, TipoAviso::Erro),
@@ -1227,7 +1227,7 @@ impl App {
                         let jobs = v.get("jobs").and_then(Value::as_u64).unwrap_or(0);
                         self.notificar(
                             &format!(
-                                "Cache limpo: removidos {logs} log(s) e {jobs} pasta(s) de cache."
+                                "Cache limpo: {logs} registro(s) e {jobs} pasta(s) de cache removidos."
                             ),
                             TipoAviso::Info,
                         );
@@ -1416,7 +1416,7 @@ impl App {
                 self.definir_job(false);
                 self.definir_status(
                     if erros {
-                        "Concluído com falhas (veja o log)."
+                        "Concluído com falhas (veja o registro)."
                     } else {
                         "Concluído."
                     },
@@ -1425,7 +1425,7 @@ impl App {
                 self.log_dock("Operação concluída.");
                 self.aviso(
                     if erros {
-                        "Concluído com falhas. Veja o log."
+                        "Concluído com falhas. Veja o registro."
                     } else {
                         "Concluído."
                     },

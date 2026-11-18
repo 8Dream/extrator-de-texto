@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 import extrator_core as core
+import mensagens
 import execucoes
 
 TRANSCRICAO_DATA_DIR = core.APP_DATA_DIR / "transcricao"
@@ -28,11 +29,11 @@ MODELOS_DIR = TRANSCRICAO_DATA_DIR / "modelos"
 TEMP_DIR = TRANSCRICAO_DATA_DIR / "temp"
 
 MODELOS_DISPONIVEIS = {
-    "tiny": {"tamanho_mb": 76, "precisao": "Baixa", "velocidade": "Muito rapida", "descricao": "Para experimentacao rapida"},
-    "base": {"tamanho_mb": 142, "precisao": "Razoavel", "velocidade": "Rapida", "descricao": "Equilibrio basico"},
-    "small": {"tamanho_mb": 460, "precisao": "Boa", "velocidade": "Moderada", "descricao": "Melhor equilibrio (padrao)"},
-    "medium": {"tamanho_mb": 1500, "precisao": "Muito boa", "velocidade": "Lenta", "descricao": "Alta precisao para PT-BR"},
-    "large-v3": {"tamanho_mb": 3000, "precisao": "Excelente", "velocidade": "Muito lenta", "descricao": "Maxima precisao (CPU pesado)"},
+    "tiny": {"tamanho_mb": 76, "precisao": "Baixa", "velocidade": "Muito rápida", "descricao": "Para experimentação rápida"},
+    "base": {"tamanho_mb": 142, "precisao": "Razoável", "velocidade": "Rápida", "descricao": "Equilíbrio básico"},
+    "small": {"tamanho_mb": 460, "precisao": "Boa", "velocidade": "Moderada", "descricao": "Melhor equilíbrio (padrão)"},
+    "medium": {"tamanho_mb": 1500, "precisao": "Muito boa", "velocidade": "Lenta", "descricao": "Alta precisão para PT-BR"},
+    "large-v3": {"tamanho_mb": 3000, "precisao": "Excelente", "velocidade": "Muito lenta", "descricao": "Máxima precisão (CPU pesado)"},
 }
 MODELO_PADRAO = "small"
 
@@ -47,7 +48,7 @@ ENTRADA_EXTS = AUDIO_EXTS | VIDEO_EXTS
 PIP_REQUIREMENTS = {
     "faster-whisper": "faster-whisper==1.2.1",
     "soundfile": "soundfile==0.14.0",
-    "ffmpeg (transcricao)": "static-ffmpeg>=2.5",
+    "ffmpeg (transcrição)": "static-ffmpeg>=2.5",
 }
 
 
@@ -100,7 +101,7 @@ def _baixador_com_progresso(ex, cancel: threading.Event):
                 with open(local_path, "wb") as arquivo:
                     for bloco in resp.iter_content(256 * 1024):
                         if cancel.is_set():
-                            raise core.OperationCancelled("Download do ffmpeg cancelado.")
+                            raise core.OperationCancelled("A baixa do ffmpeg foi cancelada.")
                         arquivo.write(bloco)
                         feito += len(bloco)
                         if total > 0:
@@ -132,7 +133,7 @@ def _baixar_ffmpeg(static_ffmpeg) -> None:
         try:
             static_ffmpeg.add_paths()
         except core.OperationCancelled:
-            ex.cancelar("Download do ffmpeg cancelado.")
+            ex.cancelar("A baixa do ffmpeg foi cancelada.")
             raise
         finally:
             sf_run.download_file = original
@@ -222,20 +223,20 @@ def iter_installation_rows():
     """Gera, uma a uma, as linhas (componente, ok, detalhes) da verificacao,
     no mesmo formato de extrator_core.iter_installation_rows()."""
     ffmpeg_path = verificar_ffmpeg()
-    yield ("ffmpeg (transcricao)", ffmpeg_path is not None, ffmpeg_path or "nao encontrado")
+    yield ("ffmpeg (transcrição)", ffmpeg_path is not None, ffmpeg_path or "não encontrado")
     try:
         import faster_whisper  # noqa: F401
         yield ("faster-whisper", True, "instalado")
     except ImportError as exc:
-        yield ("faster-whisper", False, str(exc))
+        yield ("faster-whisper", False, mensagens.erro_usuario(exc, "carregar o faster-whisper"))
     try:
         import soundfile  # noqa: F401
         yield ("soundfile", True, "instalado")
     except ImportError as exc:
-        yield ("soundfile", False, str(exc))
+        yield ("soundfile", False, mensagens.erro_usuario(exc, "carregar o soundfile"))
     instalados = modelos_instalados()
     yield (
-        "Modelo de transcricao",
+        "Modelo de transcrição",
         bool(instalados),
         ", ".join(instalados) if instalados else "nenhum (será baixado no 1º uso)",
     )
@@ -252,7 +253,7 @@ def get_model_info(nome_modelo: str) -> dict:
         info = dict(MODELOS_DISPONIVEIS[nome_modelo])
         info["nome"] = nome_modelo
         return info
-    return {"erro": f"Modelo '{nome_modelo}' nao encontrado"}
+    return {"erro": f"Modelo '{nome_modelo}' não encontrado"}
 
 
 # ============================================================
@@ -274,7 +275,7 @@ def extrair_infos_audio(arquivo: Path) -> dict:
         infos["duracao"] = info_audio.duration
         infos["taxa_amostragem"] = info_audio.samplerate
     except Exception as exc:
-        infos["erro"] = str(exc)
+        infos["erro"] = mensagens.erro_usuario(exc)
     return infos
 
 
@@ -299,7 +300,7 @@ def obter_duracao_ffprobe(arquivo: Path) -> float:
 def extrair_audio_de_video(video: Path) -> Path:
     ffmpeg_path = verificar_ffmpeg()
     if not ffmpeg_path:
-        raise RuntimeError("ffmpeg nao encontrado.")
+        raise RuntimeError("ffmpeg não encontrado.")
     TEMP_DIR.mkdir(parents=True, exist_ok=True)
     saida = TEMP_DIR / f"{video.stem}_audio.wav"
     cmd = [
@@ -311,7 +312,7 @@ def extrair_audio_de_video(video: Path) -> Path:
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"Falha ao extrair audio do video:\n{result.stderr[-800:]}")
+        raise RuntimeError(f"Falha ao extrair áudio do vídeo:\n{mensagens.erro_usuario(result.stderr[-800:], 'extrair o áudio do vídeo')}")
     return saida
 
 
@@ -329,7 +330,7 @@ def carregar_modelo(nome_modelo: str = MODELO_PADRAO, device: str = "cpu") -> An
             nome_modelo, device=device, compute_type=compute_type, download_root=str(MODELOS_DIR)
         )
     except Exception as exc:
-        raise RuntimeError(f"Erro ao carregar modelo '{nome_modelo}': {exc}")
+        raise RuntimeError(f"Erro ao carregar modelo '{nome_modelo}': {mensagens.erro_usuario(exc, 'carregar o modelo')}")
 
 
 def baixar_modelo(nome_modelo: str, log: Callable[[str], None] | None = None) -> None:
@@ -344,16 +345,16 @@ def baixar_modelo(nome_modelo: str, log: Callable[[str], None] | None = None) ->
 def gerar_prompt_ptbr(idioma: str) -> str:
     if idioma == "pt":
         return (
-            "Transcreva em portugues brasileiro. Use palavras e expressoes comuns do "
-            "portugues. Nomes proprios devem ser mantidos. Nao traduzir, apenas transcrever "
-            "o audio. Respeite a pontuacao e a estrutura natural da fala."
+            "Transcreva em português brasileiro. Use palavras e expressões comuns do "
+            "português. Nomes próprios devem ser mantidos. Não traduzir, apenas transcrever "
+            "o áudio. Respeite a pontuação e a estrutura natural da fala."
         )
     if idioma == "auto":
         return (
-            "Transcreva o audio no idioma falado. Se for portugues brasileiro, use "
-            "vocabulario e expressoes comuns do PT-BR."
+            "Transcreva o áudio no idioma falado. Se for português brasileiro, use "
+            "vocabulário e expressões comuns do PT-BR."
         )
-    return f"Transcreva o audio no idioma {idioma}."
+    return f"Transcreva o áudio no idioma {idioma}."
 
 
 # ============================================================
@@ -419,12 +420,12 @@ def formatar_markdown(segments, meta: dict) -> str:
             f"({meta.get('confianca_idioma', 0):.1%})"
         )
     if meta.get("duracao_s") is not None:
-        linhas.append(f"- Duracao: {format_hhmmss(meta['duracao_s'])}")
+        linhas.append(f"- Duração: {format_hhmmss(meta['duracao_s'])}")
     if meta.get("modelo"):
         linhas.append(f"- Modelo: {meta['modelo']}")
     linhas.append(f"- Gerado em: {meta.get('gerado_em', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}")
     linhas.append("")
-    linhas.append("## Transcricao")
+    linhas.append("## Transcrição")
     linhas.append("")
     for seg in segments:
         texto = seg.text.strip()
@@ -471,7 +472,7 @@ class _Heartbeat:
     def _run(self) -> None:
         while not self._stop.wait(self._intervalo):
             decorrido = time.monotonic() - self._inicio
-            self._log(f"  ... ainda em execucao ({self._fase}) - {format_hhmmss(decorrido)} decorridos")
+            self._log(f"  ... ainda em execução ({self._fase}) - {format_hhmmss(decorrido)} decorridos")
 
 
 def transcrever_com_progresso(
@@ -496,8 +497,8 @@ def transcrever_com_progresso(
     nao interrompe um segmento ja em processamento).
     """
     log(
-        f"--- Nova transcricao: {arquivo.name} (modelo={modelo}, idioma={idioma}, "
-        f"formato={format_saida}, beams={beam_size})"
+        f"--- Nova transcrição: {arquivo.name} (modelo={modelo}, idioma={idioma}, "
+        f"formato={format_saida}, feixes={beam_size})"
     )
 
     heartbeat = _Heartbeat(log)
@@ -506,13 +507,13 @@ def transcrever_com_progresso(
         heartbeat.fase("verificando ffmpeg")
         ffmpeg_path = verificar_ffmpeg()
         if ffmpeg_path is None:
-            raise RuntimeError("ffmpeg nao encontrado. Use o atalho 'Reparar instalacao' do Menu Iniciar.")
+            raise RuntimeError("ffmpeg não encontrado. Use o atalho 'Reparar instalação' do Menu Iniciar.")
 
         arquivo_original = arquivo
         arquivo_para_transcrever = arquivo
         if arquivo.suffix.lower() in VIDEO_EXTS:
-            heartbeat.fase("extraindo audio do video")
-            log(f"Extraindo audio do video com ffmpeg...")
+            heartbeat.fase("extraindo áudio do vídeo")
+            log(f"Extraindo áudio do vídeo com ffmpeg...")
             arquivo_para_transcrever = extrair_audio_de_video(arquivo)
 
         heartbeat.fase("carregando modelo")
@@ -521,13 +522,13 @@ def transcrever_com_progresso(
         model = carregar_modelo(nome_modelo=modelo, device=device)
         log(f"Modelo carregado em {format_hhmmss(time.monotonic() - t0)}")
 
-        heartbeat.fase("analisando audio")
+        heartbeat.fase("analisando áudio")
         audio_infos = extrair_infos_audio(arquivo_para_transcrever)
         duracao_total = audio_infos.get("duracao") or 0.0
         if duracao_total <= 0:
-            log("  duracao nao disponivel via soundfile; tentando via ffprobe...")
+            log("  duração não disponível via soundfile; tentando via ffprobe...")
             duracao_total = obter_duracao_ffprobe(arquivo_para_transcrever)
-        log(f"Duracao total do audio: {format_hhmmss(duracao_total)}")
+        log(f"Duração total do áudio: {format_hhmmss(duracao_total)}")
         if duracao_total > 0:  # total conhecido: a barra deixa de ser indeterminada
             execucoes.total(duracao_total, "segundo", "duracao")
 
@@ -538,7 +539,7 @@ def transcrever_com_progresso(
         )
 
         heartbeat.fase("transcrevendo (aguardando 1o segmento)")
-        log(f"Transcrevendo... (idioma: {idioma}, beams: {beam_size})")
+        log(f"Transcrevendo... (idioma: {idioma}, feixes: {beam_size})")
         inicio_processamento = time.monotonic()
         segments_iter, lang_info = model.transcribe(
             str(arquivo_para_transcrever),
@@ -554,15 +555,15 @@ def transcrever_com_progresso(
         segments_list = []
         for seg in segments_iter:
             if cancel_event.is_set():
-                log("Cancelado pelo usuario.")
-                raise core.OperationCancelled("Transcricao cancelada pelo usuario.")
+                log("Cancelado pelo usuário.")
+                raise core.OperationCancelled("Transcrição cancelada pelo usuário.")
             if pause_event.is_set():
                 heartbeat.fase("pausado")
-                log("Pausado pelo usuario.")
+                log("Pausado pelo usuário.")
                 while pause_event.is_set():
                     if cancel_event.is_set():
-                        log("Cancelado pelo usuario (durante pausa).")
-                        raise core.OperationCancelled("Transcricao cancelada pelo usuario.")
+                        log("Cancelado pelo usuário (durante pausa).")
+                        raise core.OperationCancelled("Transcrição cancelada pelo usuário.")
                     time.sleep(0.2)
                 log("Retomado.")
 
@@ -585,7 +586,7 @@ def transcrever_com_progresso(
             })
             log(f"  [{format_hhmmss(seg.start)} -> {format_hhmmss(seg.end)}] {seg.text.strip()}")
 
-        log(f"Transcricao bruta concluida em {format_hhmmss(time.monotonic() - inicio_processamento)} "
+        log(f"Transcrição bruta concluída em {format_hhmmss(time.monotonic() - inicio_processamento)} "
             f"({len(segments_list)} segmentos)")
 
         heartbeat.fase("formatando e salvando")

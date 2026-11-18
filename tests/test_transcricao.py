@@ -90,7 +90,7 @@ def test_get_model_info_unknown_model_returns_error():
 
 def test_gerar_prompt_ptbr_specific_language():
     prompt = tc.gerar_prompt_ptbr("pt")
-    assert "portugues" in prompt.lower()
+    assert "português" in prompt.lower()
 
 
 def test_gerar_prompt_ptbr_auto():
@@ -152,7 +152,7 @@ def test_formatar_markdown_uses_hhmmss_timestamps_and_header():
     assert "# reuniao" in md
     assert "Arquivo de origem: `reuniao.mp3`" in md
     assert "Idioma detectado: pt (98.7%)" in md
-    assert "Duracao: 00:02:10" in md
+    assert "Duração: 00:02:10" in md
     assert "**[00:00:00 - 00:01:05]** Primeiro segmento" in md
     assert "**[00:01:05 - 00:02:10]** Segundo segmento" in md
 

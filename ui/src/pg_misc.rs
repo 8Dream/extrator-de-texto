@@ -135,7 +135,7 @@ impl App {
                         };
                         campo(ui, "Idioma do OCR", &mut c.idioma);
                         campo(ui, "Resolução (DPI)", &mut c.dpi);
-                        campo(ui, "PSM do Tesseract", &mut c.psm);
+                        campo(ui, "Modo de página do Tesseract (PSM)", &mut c.psm);
                         ui.end_row();
                         campo(ui, "Limite de texto nativo", &mut c.limite);
                         lista(ui, "cfg_cpu", "Uso de CPU", &mut c.cpu, &[("economico", "Econômico"), ("normal", "Normal"), ("maximo", "Máximo")]);
@@ -144,7 +144,7 @@ impl App {
                         lista(
                             ui,
                             "cfg_verb",
-                            "Detalhe do log",
+                            "Detalhe do registro",
                             &mut c.verbosidade,
                             &[("normal", "Normal"), ("detalhado", "Detalhado"), ("depuracao", "Depuração")],
                         );
@@ -243,10 +243,10 @@ impl App {
                                 app.iniciar_acao("abrir_dados", "Abrindo a pasta de dados…");
                                 app.chamar(Tag::AbrirDados, "open_data_folder", vec![]);
                             }
-                            if btn(if limpando { "Limpando…" } else { "Limpar cache e logs" }).pequeno().ocupado(limpando).mostrar(ui, &pal).clicked() {
+                            if btn(if limpando { "Limpando…" } else { "Limpar cache e registros" }).pequeno().ocupado(limpando).mostrar(ui, &pal).clicked() {
                                 app.confirma = Some(Confirma {
-                                    titulo: "Limpar cache e logs".into(),
-                                    corpo: format!("Remove todos os logs e o cache de retomada do OCR em:\n{dados}\nA configuração é mantida."),
+                                    titulo: "Limpar cache e registros".into(),
+                                    corpo: format!("Remove todos os registros e o cache de retomada do OCR em:\n{dados}\nA configuração é mantida."),
                                     ok: "Limpar".into(),
                                     perigo: true,
                                     acao: AcaoConfirma::LimparDados,
@@ -298,7 +298,7 @@ impl App {
                                 {
                                     app.confirma = Some(Confirma {
                                         titulo: "Instalar o que falta".into(),
-                                        corpo: "As bibliotecas ausentes serão instaladas via pip e o modelo de transcrição baixado (exige internet). Continuar?".into(),
+                                        corpo: "As bibliotecas ausentes serão instaladas pelo pip (instalador de pacotes do Python) e o modelo de transcrição será baixado (exige internet). Continuar?".into(),
                                         ok: "Instalar".into(),
                                         perigo: false,
                                         acao: AcaoConfirma::InstalarFaltantes,
@@ -365,7 +365,7 @@ impl App {
                     ui.add(egui::Label::new(RichText::new(d).color(pal.muted)));
                     ui.add_space(4.0);
                 }
-                mudo_peq(ui, &pal, &format!("Pasta de dados: {dados}  ·  Log desta sessão: {log_file}"));
+                mudo_peq(ui, &pal, &format!("Pasta de dados: {dados}  ·  Registro desta sessão: {log_file}"));
             });
         });
     }

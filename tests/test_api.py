@@ -307,12 +307,12 @@ def test_pip_requirements_so_cobrem_pacotes_pip_de_verdade():
         assert nome not in core.PIP_REQUIREMENTS
     assert "MarkItDown" in core.PIP_REQUIREMENTS
     assert "faster-whisper" in transcricao.PIP_REQUIREMENTS
-    assert "ffmpeg (transcricao)" in transcricao.PIP_REQUIREMENTS
+    assert "ffmpeg (transcrição)" in transcricao.PIP_REQUIREMENTS
 
 
 def test_verificar_instalacao_lista_o_que_falta(api, monkeypatch):
     monkeypatch.setattr(core, "installation_rows", lambda: [("Rich", False, "ausente"), ("Python", True, "3.13")])
-    monkeypatch.setattr(transcricao, "installation_rows", lambda: [("Modelo de transcricao", False, "nenhum")])
+    monkeypatch.setattr(transcricao, "installation_rows", lambda: [("Modelo de transcrição", False, "nenhum")])
     result = api.check_installation()
     assert result["missing_pip"] == ["Rich"]
     assert result["missing_model"] is True
@@ -348,7 +348,7 @@ def test_instala_dependencia_pip_ausente(api, monkeypatch):
 
 def test_modelo_ausente_dispara_download(api, monkeypatch):
     monkeypatch.setattr(core, "installation_rows", lambda: [("Python", True, "3.13")])
-    monkeypatch.setattr(transcricao, "installation_rows", lambda: [("Modelo de transcricao", False, "nenhum")])
+    monkeypatch.setattr(transcricao, "installation_rows", lambda: [("Modelo de transcrição", False, "nenhum")])
     baixados = []
     monkeypatch.setattr(transcricao, "baixar_modelo", lambda nome, **kw: baixados.append(nome))
     api.install_missing()

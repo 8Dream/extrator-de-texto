@@ -368,6 +368,7 @@ pub fn rotulo_nivel(nv: &str) -> &str {
         "ERROR" => "ERRO",
         "WARNING" => "AVISO",
         "CRITICAL" => "CRÍTICO",
+        "DEBUG" => "DEPURAÇÃO",
         o => o,
     }
 }

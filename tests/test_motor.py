@@ -196,9 +196,9 @@ def test_check_installation_tem_estados(motor):
     assert r["n_ok"] + r["n_aviso"] + r["n_falha"] == r["total"] == len(r["rows"])
     assert r["resumo"].startswith(f"{r['n_ok']} de {r['total']} OK")
     # sem modelo baixado (pasta dados nova): AVISO, nunca falha
-    modelo = next(l for l in r["rows"] if l["name"] == "Modelo de transcricao")
+    modelo = next(l for l in r["rows"] if l["name"] == "Modelo de transcrição")
     assert modelo["estado"] == "aviso" and modelo["ok"] is True and "1º uso" in modelo["detail"]
-    assert r["missing_model"] is True and "Modelo de transcricao" not in r["missing_pip"]
+    assert r["missing_model"] is True and "Modelo de transcrição" not in r["missing_pip"]
     # nada foi gravado como ERRO no log por causa do modelo
     for log in (motor.pasta / "dados" / "logs").glob("extrator_*.log"):
         assert not [l for l in log.read_text(encoding="utf-8").splitlines() if "| ERROR |" in l and "odelo" in l]

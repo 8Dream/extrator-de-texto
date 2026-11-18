@@ -175,7 +175,7 @@ impl App {
                     self.log.ao_vivo = false;
                     self.log.marca = None;
                     self.log.info = if e.is_empty() {
-                        "Não foi possível ler o log.".into()
+                        "Não foi possível ler o registro.".into()
                     } else {
                         e
                     };
@@ -332,8 +332,8 @@ impl App {
             cabecalho_pagina(
                 ui,
                 &pal,
-                "Log",
-                "Acompanhe o registro do programa ao vivo ou abra um log antigo. Cada execução também aponta para as suas linhas aqui.",
+                "Registro",
+                "Acompanhe o registro do programa ao vivo ou abra um registro antigo. Cada execução também aponta para as suas linhas aqui.",
             );
             cartao(ui, &pal, |ui| {
                 ui.horizontal_top(|ui| {
@@ -385,8 +385,8 @@ impl App {
                         app.chamar(Tag::LogBuscar, "log_buscar", vec![p]);
                     }
                     a_direita(ui, |ui| {
-                        if btn(if pasta_ocupado { "Abrindo…" } else { "Abrir pasta do log" }).pequeno().ocupado(pasta_ocupado).mostrar(ui, &pal).clicked() {
-                            app.iniciar_acao("log_pasta", "Abrindo a pasta dos logs…");
+                        if btn(if pasta_ocupado { "Abrindo…" } else { "Abrir pasta do registro" }).pequeno().ocupado(pasta_ocupado).mostrar(ui, &pal).clicked() {
+                            app.iniciar_acao("log_pasta", "Abrindo a pasta dos registros…");
                             app.chamar(Tag::LogPasta, "log_abrir_pasta", vec![]);
                         }
                         if btn("Copiar").pequeno().mostrar(ui, &pal).clicked() {
@@ -402,7 +402,7 @@ impl App {
                                     .collect::<Vec<_>>()
                                     .join("\n");
                                 ui.ctx().copy_text(t);
-                                app.notificar(&format!("Log copiado: {}.", fmt::plural(indices.len(), "linha", "linhas")), TipoAviso::Info);
+                                app.notificar(&format!("Registro copiado: {}.", fmt::plural(indices.len(), "linha", "linhas")), TipoAviso::Info);
                             }
                         }
                     });
@@ -412,7 +412,7 @@ impl App {
                     faixa(ui, pal.accent_soft, pal.accent, |ui| {
                         ui.horizontal_wrapped(|ui| {
                             ui.add(egui::Label::new(RichText::new(f).size(13.0)));
-                            if btn("Mostrar o log inteiro").pequeno().mostrar(ui, &pal).clicked() {
+                            if btn("Mostrar o registro inteiro").pequeno().mostrar(ui, &pal).clicked() {
                                 let n = app.log.nome.clone();
                                 app.log.pendente = Some(LogPedido::Cauda(n));
                                 app.chamar(Tag::LogArquivos, "log_arquivos", vec![]);

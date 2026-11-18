@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 import execucoes
+import mensagens
 
 try:
     from rich import box
@@ -54,7 +55,7 @@ try:
     from rich.table import Table
     from rich.text import Text
 except ImportError:
-    print("Dependencias ausentes. Use o atalho 'Reparar instalacao' do Menu Iniciar.")
+    print("Dependências ausentes. Use o atalho 'Reparar instalação' do Menu Iniciar.")
     raise SystemExit(2)
 
 APP_NAME = "Extrator de Texto"
@@ -156,7 +157,7 @@ def setup_logging() -> Path:
         handlers=[logging.FileHandler(log_path, encoding="utf-8")],
         force=True,
     )
-    logging.info("Inicio %s v%s", APP_NAME, APP_VERSION)
+    logging.info("Início %s v%s", APP_NAME, APP_VERSION)
     return log_path
 
 
@@ -282,7 +283,7 @@ def log_debug(message: str) -> None:
 
 def show_header() -> None:
     title = Text(APP_NAME, style="bold cyan")
-    subtitle = Text(f"v{APP_VERSION} | OCR local | terminal visivel", style="dim")
+    subtitle = Text(f"v{APP_VERSION} | OCR local | terminal visível", style="dim")
     console.print(Panel(Align.center(Text.assemble(title, "\n", subtitle)), box=box.ROUNDED))
 
 
@@ -343,7 +344,7 @@ def open_folder(path: Path) -> None:
         else:
             subprocess.Popen(["xdg-open", str(target)])
     except Exception as exc:
-        log_debug(f"Nao foi possivel abrir a pasta: {exc}")
+        log_debug(f"Não foi possível abrir a pasta: {exc}")
 
 
 def find_tesseract() -> Path | None:
@@ -431,12 +432,12 @@ def ensure_ocr_ready() -> tuple[Path, list[str]]:
     executable, languages = configure_tesseract()
     if executable is None:
         raise RuntimeError(
-            "Tesseract OCR nao foi encontrado. Use o atalho 'Reparar instalacao' do Menu Iniciar ou instale o Tesseract antes de usar OCR."
+            "Tesseract OCR não foi encontrado. Use o atalho 'Reparar instalação' do Menu Iniciar ou instale o Tesseract antes de usar OCR."
         )
     missing = required_languages(str(CONFIG["language"])) - set(languages)
     if missing:
         raise RuntimeError(
-            "Pacotes de idioma ausentes no Tesseract: " + ", ".join(sorted(missing)) + ". Use o atalho 'Reparar instalacao' do Menu Iniciar."
+            "Pacotes de idioma ausentes no Tesseract: " + ", ".join(sorted(missing)) + ". Use o atalho 'Reparar instalação' do Menu Iniciar."
         )
     return executable, languages
 
@@ -473,7 +474,7 @@ def parse_page_range(spec: str, total_pages: int) -> list[int]:
                 start = int(start_text)
                 end = int(end_text)
             except ValueError:
-                raise ValueError(f"Intervalo de paginas invalido: '{token}'")
+                raise ValueError(f"Intervalo de páginas inválido: '{token}'")
             if start > end:
                 start, end = end, start
             for page in range(start, end + 1):
@@ -483,11 +484,11 @@ def parse_page_range(spec: str, total_pages: int) -> list[int]:
             try:
                 page = int(token)
             except ValueError:
-                raise ValueError(f"Numero de pagina invalido: '{token}'")
+                raise ValueError(f"Número de página inválido: '{token}'")
             if 1 <= page <= total_pages:
                 result.add(page - 1)
     if not result:
-        raise ValueError("O intervalo informado nao contem paginas validas.")
+        raise ValueError("O intervalo informado não contém páginas válidas.")
     return sorted(result)
 
 
@@ -499,10 +500,10 @@ def page_spec_for_ocrmypdf(spec: str) -> str | None:
 
 
 def choose_page_range(total_pages: int) -> str:
-    console.print(f"Total de paginas: [bold]{total_pages}[/bold]")
+    console.print(f"Total de páginas: [bold]{total_pages}[/bold]")
     while True:
         spec = Prompt.ask(
-            "Paginas ([dim]ENTER = todas; exemplo: 1-50,75,90-120[/dim])",
+            "Páginas ([dim]ENTER = todas; exemplo: 1-50,75,90-120[/dim])",
             default="",
             show_default=False,
         )
@@ -515,14 +516,14 @@ def choose_page_range(total_pages: int) -> str:
 
 def choose_output_format() -> str:
     console.print("[1] Markdown (.md)\n[2] Texto (.txt)\n[3] Ambos")
-    choice = Prompt.ask("Formato de saida", choices=["1", "2", "3"], default="1")
+    choice = Prompt.ask("Formato de saída", choices=["1", "2", "3"], default="1")
     return {"1": "md", "2": "txt", "3": "both"}[choice]
 
 
 def choose_output_folder(inputs: Sequence[Path]) -> Path:
     if CONFIG.get("output_location") == "same":
         return inputs[0].parent
-    selected = select_folder("Escolha a pasta de saida")
+    selected = select_folder("Escolha a pasta de saída")
     return selected or inputs[0].parent
 
 
@@ -542,7 +543,7 @@ def select_files(title: str, filetypes: list[tuple[str, str]], multiple: bool = 
         root.destroy()
         return [Path(selected_one)] if selected_one else []
     except Exception as exc:
-        log_debug(f"Seletor grafico indisponivel: {exc}")
+        log_debug(f"Seletor gráfico indisponível: {exc}")
         raw = console.input("Cole o caminho completo do arquivo: ").strip().strip('"')
         return [Path(raw)] if raw else []
 
@@ -559,7 +560,7 @@ def select_folder(title: str) -> Path | None:
         root.destroy()
         return Path(selected) if selected else None
     except Exception as exc:
-        log_debug(f"Seletor de pasta indisponivel: {exc}")
+        log_debug(f"Seletor de pasta indisponível: {exc}")
         raw = console.input("Cole o caminho completo da pasta: ").strip().strip('"')
         return Path(raw) if raw else None
 
@@ -605,11 +606,11 @@ def get_pdf_info(path: Path, detailed: bool = False) -> dict:
                 image_pages += 1
         ratio = native_pages / max(1, len(sampled))
         if ratio >= 0.9:
-            classification = "PDF digital / texto pesquisavel"
+            classification = "PDF digital / texto pesquisável"
         elif ratio <= 0.1:
-            classification = "PDF digitalizado / OCR necessario"
+            classification = "PDF digitalizado / OCR necessário"
         else:
-            classification = "PDF hibrido / OCR automatico recomendado"
+            classification = "PDF híbrido / OCR automático recomendado"
         return {
             "pages": doc.page_count,
             "encrypted": False,
@@ -677,12 +678,12 @@ def write_joined_output(
             handle.write(f"- Idioma OCR: {CONFIG['language']}\n")
             handle.write(f"- Gerado em: {timestamp}\n")
             if ocr_pages:
-                handle.write(f"- Paginas processadas por OCR: {', '.join(str(p) for p in sorted(ocr_pages))}\n")
+                handle.write(f"- Páginas processadas por OCR: {', '.join(str(p) for p in sorted(ocr_pages))}\n")
             handle.write("\n")
             for page_number, source, text in chunks:
-                handle.write(f"---\n\n## Pagina {page_number} ({source})\n\n")
+                handle.write(f"---\n\n## Página {page_number} ({source})\n\n")
                 handle.write(f"<!-- origem: {source} -->\n\n")
-                handle.write(text or "[Pagina sem texto reconhecido]")
+                handle.write(text or "[Página sem texto reconhecido]")
                 handle.write("\n\n")
         outputs.append(md_path)
     if output_format in {"txt", "both"}:
@@ -691,7 +692,7 @@ def write_joined_output(
             handle.write(f"{base_name}\nArquivo de origem: {source_label}\nModo: {mode}\nGerado em: {timestamp}\n")
             for page_number, source, text in chunks:
                 handle.write(f"\n\n{'=' * 72}\nPAGINA {page_number} | {source}\n{'=' * 72}\n\n")
-                handle.write(text or "[Pagina sem texto reconhecido]")
+                handle.write(text or "[Página sem texto reconhecido]")
         outputs.append(txt_path)
     return outputs
 
@@ -796,7 +797,7 @@ def ocr_pdf_to_text(
         native_count = 0
         blank_count = 0
         log_line(f"Arquivo: {input_path}")
-        log_line(f"Modo: {mode} | Paginas: {len(pages)} | DPI: {dpi} | Idioma: {language}")
+        log_line(f"Modo: {mode} | Páginas: {len(pages)} | DPI: {dpi} | Idioma: {language}")
         emit_progress(type="start", file=input_path.name, total=len(pages))
         progress = Progress(
             SpinnerColumn(),
@@ -811,7 +812,7 @@ def ocr_pdf_to_text(
         )
         pending: list[int] = []
         with progress:
-            task = progress.add_task("Processando paginas", total=len(pages))
+            task = progress.add_task("Processando páginas", total=len(pages))
             for page_index in pages:
                 page_number = page_index + 1
                 chunk_path = job_dir / f"page_{page_number:06d}.json"
@@ -820,7 +821,7 @@ def ocr_pdf_to_text(
                         item = json.loads(chunk_path.read_text(encoding="utf-8"))
                         chunks.append((page_number, item["source"], item["text"]))
                         resumed += 1
-                        progress.console.log(f"Pagina {page_number}: retomada do cache")
+                        progress.console.log(f"Página {page_number}: retomada do cache")
                         progress.advance(task)
                         continue
                     except Exception:
@@ -853,13 +854,13 @@ def ocr_pdf_to_text(
                         if source == "texto nativo":
                             native_count += 1
                             if verbosity_at_least("detalhado"):
-                                progress.console.log(f"Pagina {page_number}: texto nativo ({len(text)} caracteres)")
+                                progress.console.log(f"Página {page_number}: texto nativo ({len(text)} caracteres)")
                         else:
                             ocr_count += 1
                             if not text:
                                 blank_count += 1
                             if verbosity_at_least("detalhado"):
-                                progress.console.log(f"Pagina {page_number}: OCR concluido ({len(text)} caracteres)")
+                                progress.console.log(f"Página {page_number}: OCR concluído ({len(text)} caracteres)")
                         chunk_path = job_dir / f"page_{page_number:06d}.json"
                         chunk_path.write_text(
                             json.dumps({"page": page_number, "source": source, "text": text}, ensure_ascii=False),
@@ -874,7 +875,7 @@ def ocr_pdf_to_text(
                 finally:
                     executor.shutdown(wait=True)
                 if cancelled:
-                    raise OperationCancelled("OCR cancelado pelo usuario.")
+                    raise OperationCancelled("OCR cancelado pelo usuário.")
         chunks.sort(key=lambda item: item[0])
         outputs = write_joined_output(input_path.stem, input_path.name, chunks, output_folder, output_format, mode)
         with contextlib.suppress(Exception):
@@ -883,15 +884,15 @@ def ocr_pdf_to_text(
         summary = Table(title="Resumo do OCR", box=box.SIMPLE_HEAVY)
         summary.add_column("Item")
         summary.add_column("Resultado", justify="right")
-        summary.add_row("Paginas processadas", str(len(pages)))
+        summary.add_row("Páginas processadas", str(len(pages)))
         summary.add_row("Texto nativo reutilizado", str(native_count))
-        summary.add_row("Paginas submetidas ao OCR", str(ocr_count))
-        summary.add_row("Paginas retomadas", str(resumed))
-        summary.add_row("Paginas sem texto", str(blank_count))
+        summary.add_row("Páginas submetidas ao OCR", str(ocr_count))
+        summary.add_row("Páginas retomadas", str(resumed))
+        summary.add_row("Páginas sem texto", str(blank_count))
         summary.add_row("Tempo total", human_duration(elapsed))
         console.print(summary)
         for output in outputs:
-            log_line(f"Saida criada: {output} ({human_size(output.stat().st_size)})", style="green")
+            log_line(f"Saída criada: {output} ({human_size(output.stat().st_size)})", style="green")
         return outputs
     finally:
         doc.close()
@@ -903,7 +904,7 @@ def _command_panel(cmd: Sequence[str]) -> Panel:
     # evita que o parser de markup do Rich interprete "[...]" como uma tag e
     # lance MarkupError ou corrompa a exibicao.
     rendered = command_text(cmd)
-    content = Text("COMANDO EM EXECUCAO\n", style="bold")
+    content = Text("COMANDO EM EXECUÇÃO\n", style="bold")
     content.append(rendered)
     return Panel.fit(content, border_style="cyan")
 
@@ -924,7 +925,8 @@ def _start_subprocess_with_reader(cmd: Sequence[str], cwd: Path | None, on_line)
             return
         for line in process.stdout:
             stripped = line.rstrip()
-            logging.info("SAIDA: %s", stripped)
+            stripped = mensagens.traduzir_linha(stripped)
+            logging.info("SAÍDA: %s", stripped)
             if on_line:
                 with contextlib.suppress(Exception):
                     on_line(stripped)
@@ -974,7 +976,7 @@ def run_process_with_spinner(
                 if cancel_event is not None and cancel_event.is_set():
                     _terminate_process(process)
                     reader.join(timeout=2)
-                    raise OperationCancelled("Processo cancelado pelo usuario.")
+                    raise OperationCancelled("Processo cancelado pelo usuário.")
                 progress.update(task, description=f"{description} | {human_duration(time.monotonic() - started)}")
                 time.sleep(0.15)
     except KeyboardInterrupt:
@@ -985,7 +987,7 @@ def run_process_with_spinner(
     returncode = process.returncode
     if returncode not in (0, None) and output_lines:
         console.print(
-            Panel(Text("\n".join(output_lines[-25:])), title="Saida do processo (ultimas linhas)", border_style="red")
+            Panel(Text("\n".join(output_lines[-25:])), title="Saída do processo (últimas linhas)", border_style="red")
         )
     return int(returncode) if returncode is not None else 1
 
@@ -1010,10 +1012,10 @@ def run_process_visible(
             if cancel_event is not None and cancel_event.is_set():
                 _terminate_process(process)
                 reader.join(timeout=2)
-                raise OperationCancelled("Processo cancelado pelo usuario.")
+                raise OperationCancelled("Processo cancelado pelo usuário.")
             time.sleep(0.1)
     except KeyboardInterrupt:
-        console.print("\n[yellow]Processo interrompido pelo usuario.[/yellow]")
+        console.print("\n[yellow]Processo interrompido pelo usuário.[/yellow]")
         _terminate_process(process)
         raise
     reader.join(timeout=2)
@@ -1033,12 +1035,12 @@ def direct_convert(
         cmd, f"Convertendo {input_path.name}", input_path.parent, cancel_event=cancel_event
     )
     if code != 0:
-        raise RuntimeError(f"MarkItDown encerrou com codigo {code}.")
+        raise RuntimeError(f"MarkItDown encerrou com código {code}.")
     if not output_path.exists() or output_path.stat().st_size == 0:
         with contextlib.suppress(Exception):
             output_path.unlink()
-        raise RuntimeError("A conversao terminou sem gerar texto. Use OCR automatico ou forcado.")
-    log_line(f"Conversao concluida: {output_path}", style="green")
+        raise RuntimeError("A conversão terminou sem gerar texto. Use OCR automático ou forçado.")
+    log_line(f"Conversão concluída: {output_path}", style="green")
     return output_path
 
 
@@ -1058,12 +1060,12 @@ def searchable_pdf(
     cancel_event: threading.Event | None = None,
 ) -> Path:
     ensure_ocr_ready()
-    emit_progress(type="status", text=f"Gerando PDF pesquisavel: {input_path.name}")
+    emit_progress(type="status", text=f"Gerando PDF pesquisável: {input_path.name}")
     if str(CONFIG.get("pdf_output_type")) == "pdfa" and find_ghostscript() is None:
         raise RuntimeError(
-            "O formato PDF/A requer o Ghostscript, que nao foi encontrado neste computador. "
-            "Instale o Ghostscript (a instalacao tenta isso automaticamente) ou troque o "
-            "'Tipo de PDF' para 'pdf' nas Configuracoes."
+            "O formato PDF/A requer o Ghostscript, que não foi encontrado neste computador. "
+            "Instale o Ghostscript (a instalação tenta isso automaticamente) ou troque o "
+            "'Tipo de PDF' para 'pdf' nas Configurações."
         )
     output_folder.mkdir(parents=True, exist_ok=True)
     suffix = {"skip": "_PESQUISAVEL", "force": "_OCR_FORCADO", "redo": "_OCR_REFEITO"}[mode]
@@ -1071,7 +1073,7 @@ def searchable_pdf(
     if pdf_is_signed(input_path) and not invalidate_signatures:
         raise RuntimeError(
             "O PDF possui assinatura digital. O OCR alteraria o documento e invalidaria a assinatura. "
-            "No menu interativo, confirme expressamente para trabalhar em uma copia."
+            "No menu interativo, confirme expressamente para trabalhar em uma cópia."
         )
     with contextlib.suppress(Exception):
         info = get_pdf_info(input_path)
@@ -1114,19 +1116,19 @@ def searchable_pdf(
         with contextlib.suppress(Exception):
             if output_path.exists() and output_path.stat().st_size == 0:
                 output_path.unlink()
-        raise RuntimeError(f"OCRmyPDF encerrou com codigo {code}. Consulte as linhas exibidas e o log.")
+        raise RuntimeError(f"OCRmyPDF encerrou com código {code}. Consulte as linhas exibidas e o registro.")
     if not output_path.exists() or output_path.stat().st_size == 0:
-        raise RuntimeError("OCRmyPDF terminou sem criar o PDF de saida.")
+        raise RuntimeError("OCRmyPDF terminou sem criar o PDF de saída.")
     try:
         original_info = get_pdf_info(input_path)
         output_info = get_pdf_info(output_path)
         if original_info.get("pages") != output_info.get("pages"):
-            raise RuntimeError("O PDF de saida possui quantidade de paginas diferente do original.")
+            raise RuntimeError("O PDF de saída possui quantidade de páginas diferente do original.")
     except RuntimeError:
         raise
     except Exception as exc:
-        log_debug(f"Validacao de paginas nao concluida: {exc}")
-    log_line(f"PDF pesquisavel criado: {output_path}", style="green")
+        log_debug(f"Validacao de páginas não concluída: {exc}")
+    log_line(f"PDF pesquisável criado: {output_path}", style="green")
     return output_path
 
 
@@ -1157,7 +1159,7 @@ def ocr_images(
         task = progress.add_task("OCR de imagens", total=len(inputs))
         for index, input_path in enumerate(inputs, 1):
             if cancel_event is not None and cancel_event.is_set():
-                raise OperationCancelled("OCR de imagens cancelado pelo usuario.")
+                raise OperationCancelled("OCR de imagens cancelado pelo usuário.")
             progress.console.log(f"Imagem: {input_path.name}")
             with Image.open(input_path) as raw_image:
                 image = ImageOps.exif_transpose(raw_image).convert("RGB")
@@ -1200,12 +1202,12 @@ def diagnose_rows(path: Path) -> list[tuple[str, str]]:
         info = get_pdf_info(path, detailed=True)
         rows.append(("Classificacao", str(info["classification"])))
         rows.append(("Paginas", str(info["pages"])))
-        rows.append(("PDF protegido", "Sim" if info["encrypted"] else "Nao"))
-        rows.append(("Assinatura digital", "Detectada" if info["signed"] else "Nao detectada"))
+        rows.append(("PDF protegido", "Sim" if info["encrypted"] else "Não"))
+        rows.append(("Assinatura digital", "Detectada" if info["signed"] else "Não detectada"))
         if not info["encrypted"]:
-            rows.append(("Paginas com texto nativo", f"{info['native_pages']} de {info['sampled_pages']}"))
-            rows.append(("Paginas com pouco/nenhum texto", f"{info['scan_pages']} de {info['sampled_pages']}"))
-            rows.append(("Paginas com imagens", f"{info['image_pages']} de {info['sampled_pages']}"))
+            rows.append(("Páginas com texto nativo", f"{info['native_pages']} de {info['sampled_pages']}"))
+            rows.append(("Páginas com pouco/nenhum texto", f"{info['scan_pages']} de {info['sampled_pages']}"))
+            rows.append(("Páginas com imagens", f"{info['image_pages']} de {info['sampled_pages']}"))
     elif path.suffix.lower() in SUPPORTED_IMAGES:
         from PIL import Image
 
@@ -1217,7 +1219,7 @@ def diagnose_rows(path: Path) -> list[tuple[str, str]]:
 
 
 def diagnose_file(path: Path) -> None:
-    table = Table(title=f"Diagnostico: {path.name}", box=box.ROUNDED)
+    table = Table(title=f"Diagnóstico: {path.name}", box=box.ROUNDED)
     table.add_column("Item", style="cyan")
     table.add_column("Resultado")
     for item, result in diagnose_rows(path):
@@ -1246,7 +1248,7 @@ def iter_installation_rows():
             version_ok = True
         yield ("MarkItDown", version_ok, version)
     except Exception as exc:
-        yield ("MarkItDown", False, str(exc))
+        yield ("MarkItDown", False, mensagens.erro_usuario(exc, "carregar o MarkItDown"))
     for package_name, import_name in [
         ("PyMuPDF", "fitz"),
         ("pytesseract", "pytesseract"),
@@ -1258,14 +1260,14 @@ def iter_installation_rows():
             __import__(import_name)
             yield (package_name, True, "instalado")
         except Exception as exc:
-            yield (package_name, False, str(exc))
+            yield (package_name, False, mensagens.erro_usuario(exc, "carregar a biblioteca"))
     executable, languages = configure_tesseract()
-    yield ("Tesseract", executable is not None, str(executable) if executable else "nao encontrado")
+    yield ("Tesseract", executable is not None, str(executable) if executable else "não encontrado")
     missing = required_languages(str(CONFIG["language"])) - set(languages)
     yield ("Idiomas OCR", not missing, ", ".join(languages) if languages else "nenhum")
     gs_path = find_ghostscript()
     gs_required = str(CONFIG.get("pdf_output_type")) == "pdfa"
-    yield ("Ghostscript (PDF/A)", gs_path is not None or not gs_required, str(gs_path) if gs_path else ("nao encontrado" if gs_required else "nao instalado (opcional, so para PDF/A)"))
+    yield ("Ghostscript (PDF/A)", gs_path is not None or not gs_required, str(gs_path) if gs_path else ("não encontrado" if gs_required else "não instalado (opcional, só para PDF/A)"))
 
 
 def installation_rows() -> list[tuple[str, bool, str]]:
@@ -1280,28 +1282,28 @@ def check_installation(show_panel: bool = True) -> bool:
     rows = installation_rows()
     all_ok = all(ok for _, ok, _ in rows)
     if show_panel:
-        table = Table(title="Verificacao da instalacao", box=box.ROUNDED)
+        table = Table(title="Verificação da instalação", box=box.ROUNDED)
         table.add_column("Componente")
         table.add_column("Estado")
         table.add_column("Detalhes")
         for name, ok, detail in rows:
             table.add_row(name, "[green]OK[/green]" if ok else "[red]FALHA[/red]", detail)
         console.print(table)
-        console.print(f"Log da sessao: [dim]{SESSION_LOG}[/dim]")
+        console.print(f"Registro da sessão: [dim]{SESSION_LOG}[/dim]")
     return all_ok
 
 
 def handle_error(exc: Exception) -> None:
     logging.exception("Falha: %s", exc)
-    console.print(Panel(f"[bold red]ERRO[/bold red]\n{exc}", border_style="red"))
+    console.print(Panel(f"[bold red]ERRO[/bold red]\n{mensagens.erro_usuario(exc)}", border_style="red"))
     if verbosity_at_least("depuracao"):
         console.print(traceback.format_exc(), style="dim")
-    console.print(f"[dim]Log: {SESSION_LOG}[/dim]")
+    console.print(f"[dim]Registro: {SESSION_LOG}[/dim]")
 
 
 def interactive_direct() -> None:
     files = select_files(
-        "Selecione os arquivos para conversao direta",
+        "Selecione os arquivos para conversão direta",
         [("Documentos suportados", "*.pdf *.docx *.pptx *.xlsx *.html *.htm *.txt *.csv *.json *.xml"), ("Todos", "*.*")],
         multiple=True,
     )
@@ -1332,7 +1334,7 @@ def interactive_ocr_text(mode: str) -> None:
         try:
             info = get_pdf_info(path)
             if info.get("encrypted"):
-                raise RuntimeError("O PDF esta protegido por senha.")
+                raise RuntimeError("O PDF está protegido por senha.")
             page_spec = choose_page_range(int(info["pages"]))
             ocr_pdf_to_text(path, output_folder, mode, page_spec, output_format)
         except KeyboardInterrupt:
@@ -1355,12 +1357,12 @@ def interactive_searchable(mode: str, also_markdown: bool = False) -> None:
         try:
             info = get_pdf_info(path)
             if info.get("encrypted"):
-                raise RuntimeError("O PDF esta protegido por senha. Remova a senha antes do OCR.")
+                raise RuntimeError("O PDF está protegido por senha. Remova a senha antes do OCR.")
             invalidate = False
             if info.get("signed"):
                 console.print(
                     Panel(
-                        "Este PDF possui assinatura digital. O original sera preservado, mas a copia com OCR tera a assinatura invalidada.",
+                        "Este PDF possui assinatura digital. O original será preservado, mas a cópia com OCR terá a assinatura invalidada.",
                         border_style="yellow",
                     )
                 )
@@ -1373,7 +1375,7 @@ def interactive_searchable(mode: str, also_markdown: bool = False) -> None:
                 try:
                     direct_convert(pdf_output, output_folder)
                 except Exception as exc:
-                    console.print("[yellow]A conversao do PDF pesquisavel para Markdown falhou. Tentando extracao automatica...[/yellow]")
+                    console.print("[yellow]A conversão do PDF pesquisável para Markdown falhou. Tentando extração automática...[/yellow]")
                     handle_error(exc)
                     ocr_pdf_to_text(pdf_output, output_folder, "auto", "", "md")
         except KeyboardInterrupt:
@@ -1398,7 +1400,7 @@ def interactive_images() -> None:
     output_format = choose_output_format()
     combined = False
     if len(files) > 1:
-        combined = Confirm.ask("Combinar todas as imagens em um unico arquivo de saida?", default=True)
+        combined = Confirm.ask("Combinar todas as imagens em um único arquivo de saída?", default=True)
     try:
         ocr_images(files, output_folder, output_format, combined)
     except Exception as exc:
@@ -1410,15 +1412,15 @@ def batch_menu() -> None:
     if not folder or not folder.exists():
         return
     console.print(
-        "[1] Conversao direta\n"
-        "[2] OCR automatico para Markdown\n"
-        "[3] OCR forcado para Markdown\n"
-        "[4] PDF pesquisavel\n"
-        "[5] PDF pesquisavel + Markdown"
+        "[1] Conversão direta\n"
+        "[2] OCR automático para Markdown\n"
+        "[3] OCR forçado para Markdown\n"
+        "[4] PDF pesquisável\n"
+        "[5] PDF pesquisável + Markdown"
     )
     choice = Prompt.ask("Modo do lote", choices=["1", "2", "3", "4", "5"], default="2")
     recursive = Confirm.ask("Incluir subpastas?", default=False)
-    output_folder = select_folder("Escolha a pasta de saida") or (folder / "Extrator_saida")
+    output_folder = select_folder("Escolha a pasta de saída") or (folder / "Extrator_saida")
     output_folder.mkdir(parents=True, exist_ok=True)
     pattern = "**/*" if recursive else "*"
     allowed = SUPPORTED_DIRECT if choice == "1" else {".pdf"}
@@ -1430,7 +1432,7 @@ def batch_menu() -> None:
         and not path.stem.endswith(OUTPUT_NAME_SUFFIXES)
     )
     if not files:
-        console.print("[yellow]Nenhum arquivo compativel encontrado.[/yellow]")
+        console.print("[yellow]Nenhum arquivo compatível encontrado.[/yellow]")
         return
     console.print(f"Arquivos encontrados: [bold]{len(files)}[/bold]")
     if not Confirm.ask("Iniciar o lote?", default=True):
@@ -1465,11 +1467,11 @@ def batch_menu() -> None:
             except KeyboardInterrupt:
                 raise
             except Exception as exc:
-                overall.console.log(f"[red]Falha em {path.name}: {exc}[/red]")
+                overall.console.log(f"[red]Falha em {path.name}: {mensagens.erro_usuario(exc)}[/red]")
                 logging.exception("Falha no lote: %s", path)
             finally:
                 overall.advance(task)
-    console.print(f"[green]Lote encerrado. Saida: {output_folder}[/green]")
+    console.print(f"[green]Lote encerrado. Saída: {output_folder}[/green]")
 
 
 def settings_menu() -> None:
@@ -1477,7 +1479,7 @@ def settings_menu() -> None:
     while True:
         clear_screen()
         show_header()
-        table = Table(title="Configuracoes atuais", box=box.ROUNDED)
+        table = Table(title="Configurações atuais", box=box.ROUNDED)
         table.add_column("Opcao")
         table.add_column("Valor")
         labels = [
@@ -1485,19 +1487,19 @@ def settings_menu() -> None:
             ("2", "DPI do OCR", "dpi"),
             ("3", "PSM Tesseract", "psm"),
             ("4", "Limite de texto nativo", "native_text_threshold"),
-            ("5", "Nivel de exibicao", "verbosity"),
+            ("5", "Nível de exibição", "verbosity"),
             ("6", "Uso de CPU", "cpu_mode"),
-            ("7", "Rotacao automatica", "rotate_pages"),
-            ("8", "Corrigir inclinacao", "deskew"),
+            ("7", "Rotação automática", "rotate_pages"),
+            ("8", "Corrigir inclinação", "deskew"),
             ("9", "Tipo de PDF", "pdf_output_type"),
             ("10", "Retomar OCR interrompido", "resume"),
             ("11", "Abrir pasta ao concluir", "auto_open_output"),
-            ("12", "Pasta de saida", "output_location"),
+            ("12", "Pasta de saída", "output_location"),
         ]
         for number, label, key in labels:
             table.add_row(f"[{number}] {label}", str(CONFIG.get(key)))
         console.print(table)
-        console.print("[13] Restaurar padroes\n[0] Voltar")
+        console.print("[13] Restaurar padrões\n[0] Voltar")
         choice = Prompt.ask("Escolha", default="0")
         if choice == "0":
             save_config(CONFIG)
@@ -1505,19 +1507,19 @@ def settings_menu() -> None:
         if choice == "1":
             CONFIG["language"] = Prompt.ask("Idiomas Tesseract", default=str(CONFIG["language"]))
         elif choice == "2":
-            CONFIG["dpi"] = IntPrompt.ask("DPI (180 rapido, 220 equilibrado, 300 qualidade)", default=int(CONFIG["dpi"]))
+            CONFIG["dpi"] = IntPrompt.ask("DPI (180 rápido, 220 equilibrado, 300 qualidade)", default=int(CONFIG["dpi"]))
         elif choice == "3":
-            CONFIG["psm"] = IntPrompt.ask("PSM (3 automatico, 6 bloco unico, 11 texto disperso)", default=int(CONFIG["psm"]))
+            CONFIG["psm"] = IntPrompt.ask("PSM (3 automático, 6 bloco único, 11 texto disperso)", default=int(CONFIG["psm"]))
         elif choice == "4":
-            CONFIG["native_text_threshold"] = IntPrompt.ask("Caracteres minimos para considerar texto nativo", default=int(CONFIG["native_text_threshold"]))
+            CONFIG["native_text_threshold"] = IntPrompt.ask("Caracteres mínimos para considerar texto nativo", default=int(CONFIG["native_text_threshold"]))
         elif choice == "5":
             CONFIG["verbosity"] = Prompt.ask("Nivel", choices=["normal", "detalhado", "depuracao"], default=str(CONFIG["verbosity"]))
         elif choice == "6":
             CONFIG["cpu_mode"] = Prompt.ask("Uso de CPU", choices=["economico", "normal", "maximo"], default=str(CONFIG["cpu_mode"]))
         elif choice == "7":
-            CONFIG["rotate_pages"] = Confirm.ask("Ativar rotacao automatica?", default=bool(CONFIG["rotate_pages"]))
+            CONFIG["rotate_pages"] = Confirm.ask("Ativar rotação automática?", default=bool(CONFIG["rotate_pages"]))
         elif choice == "8":
-            CONFIG["deskew"] = Confirm.ask("Corrigir paginas inclinadas?", default=bool(CONFIG["deskew"]))
+            CONFIG["deskew"] = Confirm.ask("Corrigir páginas inclinadas?", default=bool(CONFIG["deskew"]))
         elif choice == "9":
             CONFIG["pdf_output_type"] = Prompt.ask("Tipo", choices=["pdf", "pdfa"], default=str(CONFIG["pdf_output_type"]))
         elif choice == "10":
@@ -1534,32 +1536,32 @@ def settings_menu() -> None:
 def show_help() -> None:
     console.print(
         Panel(
-            "[bold]Conversao direta[/bold]: usa MarkItDown e nao executa OCR.\n\n"
-            "[bold]OCR automatico para Markdown[/bold]: preserva texto nativo e aplica OCR apenas nas paginas sem texto suficiente.\n\n"
-            "[bold]OCR forcado para Markdown[/bold]: rasteriza e reconhece todas as paginas. E mais lento.\n\n"
-            "[bold]PDF pesquisavel[/bold]: usa OCRmyPDF para manter a aparencia do PDF e adicionar uma camada pesquisavel.\n\n"
-            "[bold]Refazer OCR[/bold]: substitui uma camada de OCR existente quando possivel.\n\n"
+            "[bold]Conversão direta[/bold]: usa MarkItDown e não executa OCR.\n\n"
+            "[bold]OCR automático para Markdown[/bold]: preserva texto nativo e aplica OCR apenas nas páginas sem texto suficiente.\n\n"
+            "[bold]OCR forçado para Markdown[/bold]: rasteriza e reconhece todas as páginas. É mais lento.\n\n"
+            "[bold]PDF pesquisável[/bold]: usa OCRmyPDF para manter a aparência do PDF e adicionar uma camada pesquisável.\n\n"
+            "[bold]Refazer OCR[/bold]: substitui uma camada de OCR existente quando possível.\n\n"
             "O original nunca e sobrescrito. Ctrl+C cancela. O OCR para Markdown pode ser retomado depois.",
-            title="Ajuda rapida",
+            title="Ajuda rápida",
             border_style="cyan",
         )
     )
-    console.print(f"Dados e configuracoes (dentro da pasta do programa): [dim]{APP_DATA_DIR}[/dim]")
-    console.print(f"Log desta sessao: [dim]{SESSION_LOG}[/dim]")
+    console.print(f"Dados e configurações (dentro da pasta do programa): [dim]{APP_DATA_DIR}[/dim]")
+    console.print(f"Registro desta sessão: [dim]{SESSION_LOG}[/dim]")
 
 
 def clear_data_interactive() -> None:
     console.print(
         Panel(
-            f"Isto remove todos os logs e todo o cache de retomada de OCR em:\n{APP_DATA_DIR}\n\n"
-            "A configuracao (dados/config.json) e preservada.",
+            f"Isto remove todos os registros e todo o cache de retomada de OCR em:\n{APP_DATA_DIR}\n\n"
+            "A configuração (dados/config.json) é preservada.",
             border_style="yellow",
         )
     )
     if not Confirm.ask("Confirma a limpeza agora?", default=False):
         return
     removed_logs, removed_jobs = cleanup_data(retention_days=0)
-    console.print(f"[green]Removidos {removed_logs} arquivo(s) de log e {removed_jobs} pasta(s) de cache.[/green]")
+    console.print(f"[green]Removidos {removed_logs} arquivo(s) de registro e {removed_jobs} pasta(s) de cache.[/green]")
 
 
 def diagnose_interactive() -> None:
@@ -1573,23 +1575,23 @@ def main_menu() -> None:
     while True:
         show_header()
         console.print(
-            "[bold cyan][1][/bold cyan] Conversao direta para Markdown (sem OCR)\n"
-            "[bold cyan][2][/bold cyan] OCR automatico para Markdown/TXT\n"
-            "[bold cyan][3][/bold cyan] OCR forcado para Markdown/TXT\n"
-            "[bold cyan][4][/bold cyan] Criar PDF pesquisavel (OCR automatico)\n"
-            "[bold cyan][5][/bold cyan] Criar PDF pesquisavel + Markdown\n"
-            "[bold cyan][6][/bold cyan] Criar PDF pesquisavel com OCR forcado\n"
+            "[bold cyan][1][/bold cyan] Conversão direta para Markdown (sem OCR)\n"
+            "[bold cyan][2][/bold cyan] OCR automático para Markdown/TXT\n"
+            "[bold cyan][3][/bold cyan] OCR forçado para Markdown/TXT\n"
+            "[bold cyan][4][/bold cyan] Criar PDF pesquisável (OCR automático)\n"
+            "[bold cyan][5][/bold cyan] Criar PDF pesquisável + Markdown\n"
+            "[bold cyan][6][/bold cyan] Criar PDF pesquisável com OCR forçado\n"
             "[bold cyan][7][/bold cyan] Refazer OCR de PDF existente\n"
             "[bold cyan][8][/bold cyan] OCR de imagens\n"
             "[bold cyan][9][/bold cyan] Processar pasta em lote\n"
             "[bold cyan][10][/bold cyan] Diagnosticar arquivo\n"
-            "[bold cyan][11][/bold cyan] Verificar instalacao\n"
-            "[bold cyan][12][/bold cyan] Configuracoes\n"
+            "[bold cyan][11][/bold cyan] Verificar instalação\n"
+            "[bold cyan][12][/bold cyan] Configurações\n"
             "[bold cyan][13][/bold cyan] Ajuda\n"
-            "[bold cyan][14][/bold cyan] Limpar cache e logs\n"
+            "[bold cyan][14][/bold cyan] Limpar cache e registros\n"
             "[bold cyan][0][/bold cyan] Sair"
         )
-        choice = Prompt.ask("\nEscolha uma opcao", default="2")
+        choice = Prompt.ask("\nEscolha uma opção", default="2")
         try:
             if choice == "0":
                 return
@@ -1623,9 +1625,9 @@ def main_menu() -> None:
             elif choice == "14":
                 clear_data_interactive()
             else:
-                console.print("[yellow]Opcao invalida.[/yellow]")
+                console.print("[yellow]Opção inválida.[/yellow]")
         except KeyboardInterrupt:
-            console.print("\n[yellow]Operacao cancelada.[/yellow]")
+            console.print("\n[yellow]Operação cancelada.[/yellow]")
         except Exception as exc:
             handle_error(exc)
         pause()
@@ -1634,14 +1636,14 @@ def main_menu() -> None:
 def cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="extrator", description=APP_NAME)
     parser.add_argument("--version", action="version", version=APP_VERSION)
-    parser.add_argument("--check", action="store_true", help="verifica a instalacao")
+    parser.add_argument("--check", action="store_true", help="verifica a instalação")
     sub = parser.add_subparsers(dest="command")
 
-    direct = sub.add_parser("direct", help="conversao direta sem OCR")
+    direct = sub.add_parser("direct", help="conversão direta sem OCR")
     direct.add_argument("files", nargs="+")
     direct.add_argument("-o", "--output", type=Path)
 
-    for name, help_text in [("auto-ocr", "OCR automatico para Markdown"), ("force-ocr", "OCR forcado para Markdown")]:
+    for name, help_text in [("auto-ocr", "OCR automático para Markdown"), ("force-ocr", "OCR forçado para Markdown")]:
         command = sub.add_parser(name, help=help_text)
         command.add_argument("files", nargs="+")
         command.add_argument("-o", "--output", type=Path)
@@ -1649,8 +1651,8 @@ def cli_parser() -> argparse.ArgumentParser:
         command.add_argument("--format", choices=["md", "txt", "both"], default="md")
 
     for name, mode, help_text in [
-        ("searchable", "skip", "cria PDF pesquisavel"),
-        ("force-pdf", "force", "cria PDF pesquisavel com OCR forcado"),
+        ("searchable", "skip", "cria PDF pesquisável"),
+        ("force-pdf", "force", "cria PDF pesquisável com OCR forçado"),
         ("redo-pdf", "redo", "refaz OCR existente"),
     ]:
         command = sub.add_parser(name, help=help_text)
@@ -1689,7 +1691,7 @@ def run_cli(args: argparse.Namespace) -> int:
                 searchable_pdf(path, output_folder, args.pdf_mode, args.pages, args.invalidate_signatures)
         return 0
     except KeyboardInterrupt:
-        console.print("[yellow]Operacao cancelada.[/yellow]")
+        console.print("[yellow]Operação cancelada.[/yellow]")
         return 130
     except Exception as exc:
         handle_error(exc)

@@ -121,7 +121,7 @@ def test_write_joined_output_md_marks_ocr_pages(tmp_path):
     chunks = [(1, "texto nativo", "abc"), (2, "OCR", "def")]
     outputs = app.write_joined_output("base", "origem.pdf", chunks, tmp_path, "md", "auto")
     content = outputs[0].read_text(encoding="utf-8")
-    assert "Paginas processadas por OCR: 2" in content
+    assert "Páginas processadas por OCR: 2" in content
     assert "## Pagina 1 (texto nativo)" in content
     assert "## Pagina 2 (OCR)" in content
 
@@ -461,4 +461,4 @@ def test_diagnose_rows_for_pdf(tmp_path):
     rows = dict(app.diagnose_rows(pdf_path))
     assert rows["Extensao"] == ".pdf"
     assert "Assinatura digital" in rows
-    assert rows["Assinatura digital"] == "Nao detectada"
+    assert rows["Assinatura digital"] == "Não detectada"

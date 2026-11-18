@@ -716,7 +716,7 @@ def test_api_nao_repete_acoes_destrutivas(api, monkeypatch):
     monkeypatch.setattr(core, "cleanup_data", lambda retention_days=0: (1, 2))
     assert api.clear_data()["ok"] is True
     ex = _unica(api, "limpeza")
-    assert ex["estado"] == "concluida" and ex["repetivel"] is False and "1 log" in ex["mensagem"]
+    assert ex["estado"] == "concluida" and ex["repetivel"] is False and "1 registro" in ex["mensagem"]
     assert api.exec_repetir(ex["id"])["ok"] is False
 
 

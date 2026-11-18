@@ -77,7 +77,7 @@ impl App {
                 ui,
                 &pal,
                 "Execuções",
-                "Tudo o que o programa está fazendo e o que já fez, com etapa, tempo, estimativa e log de cada tarefa.",
+                "Tudo o que o programa está fazendo e o que já fez, com etapa, tempo, estimativa e registro de cada tarefa.",
             );
             cartao(ui, &pal, |ui| {
                 let nomes: Vec<&str> = ESTADOS.iter().map(|e| e.1).collect();
@@ -276,7 +276,7 @@ impl App {
                     }
                     if !ex.log_arquivo.is_empty()
                         && ex.log_ini.is_some()
-                        && btn("Ver no log").pequeno().mostrar(ui, &pal).clicked()
+                        && btn("Ver no registro").pequeno().mostrar(ui, &pal).clicked()
                     {
                         self.abrir_log_da_execucao(ex);
                     }
@@ -304,7 +304,7 @@ impl App {
                         ("Fim", ex.fim_em.map(fmt::data_local).unwrap_or_default()),
                         ("Resultado", ex.mensagem.clone()),
                         ("Erro", ex.erro.clone()),
-                        ("Log", ex.log_arquivo.clone()),
+                        ("Registro", ex.log_arquivo.clone()),
                         ("Identificador", ex.id.clone()),
                     ];
                     egui::Grid::new(format!("dl_{}", ex.id))
@@ -320,7 +320,7 @@ impl App {
                             }
                         });
                     ui.add_space(6.0);
-                    mudo_peq(ui, &pal, "Log desta execução");
+                    mudo_peq(ui, &pal, "Registro desta execução");
                     Frame::new()
                         .fill(pal.surface2)
                         .stroke(Stroke::new(1.0, pal.border))
@@ -356,7 +356,7 @@ impl App {
                                         }
                                         _ => {
                                             ui.add(egui::Label::new(mono(
-                                                "Esta execução ainda não registrou linhas de log.",
+                                                "Esta execução ainda não registrou linhas de registro.",
                                                 pal.muted,
                                             )));
                                         }

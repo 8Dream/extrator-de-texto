@@ -394,7 +394,7 @@ impl App {
                             }
                         });
                         ui.vertical(|ui| {
-                            rotulo(ui, "Precisão da busca (beams)");
+                            rotulo(ui, "Precisão da busca (feixes)");
                             entrada_simples(ui, &pal, &mut app.tr.beams, "5", 150.0);
                         });
                     });

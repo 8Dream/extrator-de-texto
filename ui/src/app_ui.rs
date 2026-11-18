@@ -17,7 +17,7 @@ const ITENS_MENU: [(Pagina, Icone, &str); 8] = [
     (Pagina::Transcricao, Icone::Microfone, "Transcrição"),
     (Pagina::Lote, Icone::Lote, "Lote"),
     (Pagina::Execucoes, Icone::Execucoes, "Execuções"),
-    (Pagina::Log, Icone::Log, "Log"),
+    (Pagina::Log, Icone::Log, "Registro"),
     (Pagina::Configuracoes, Icone::Ajustes, "Configurações"),
     (Pagina::Ajuda, Icone::Ajuda, "Ajuda e instalação"),
 ];
@@ -292,9 +292,9 @@ impl App {
                     );
                     a_direita(ui, |ui| {
                         let rotulo = if self.dock_aberto {
-                            "Ocultar log"
+                            "Ocultar registro"
                         } else {
-                            "Ver log"
+                            "Ver registro"
                         };
                         if btn(rotulo).link().pequeno().mostrar(ui, &pal).clicked() {
                             self.dock_aberto = !self.dock_aberto;
@@ -624,7 +624,7 @@ impl App {
                                 },
                             )));
                             if let Some(l) = &a.link_log {
-                                if btn("Ver no log")
+                                if btn("Ver no registro")
                                     .link()
                                     .pequeno()
                                     .mostrar(ui, &pal)

@@ -160,13 +160,13 @@ def api(monkeypatch):
 
 def test_verificacao_roda_em_thread_e_emite_linhas_e_resultado(api, monkeypatch):
     monkeypatch.setattr(core, "iter_installation_rows", lambda: iter([("Python", True, "3.14"), ("Rich", False, "ausente")]))
-    monkeypatch.setattr(transcricao, "iter_installation_rows", lambda: iter([("Modelo de transcricao", False, "nenhum")]))
+    monkeypatch.setattr(transcricao, "iter_installation_rows", lambda: iter([("Modelo de transcrição", False, "nenhum")]))
     assert api.start_check_installation() == {"ok": True, "status": "started"}
     api._check_thread.join(5)
     assert not api._check_thread.is_alive()
     eventos = api.drain_events()
     assert [e["type"] for e in eventos] == ["check_start", "check_row", "check_row", "check_row", "check_done"]
-    assert [e["name"] for e in eventos if e["type"] == "check_row"] == ["Python", "Rich", "Modelo de transcricao"]
+    assert [e["name"] for e in eventos if e["type"] == "check_row"] == ["Python", "Rich", "Modelo de transcrição"]
     final = eventos[-1]
     assert [r["ok"] for r in final["rows"]] == [True, False, True]  # o modelo ausente e aviso
     assert [r["estado"] for r in final["rows"]] == ["ok", "falha", "aviso"]
